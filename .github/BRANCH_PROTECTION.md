@@ -1,10 +1,10 @@
 # Branch Protection Rules
 
-This document outlines the branch protection settings that should be configured on GitHub.
+This document outlines the simplified branch protection settings configured on GitHub.
 
-## How to Configure
+## Current Configuration
 
-Go to: Repository Settings → Branches → Add rule (or edit existing)
+Both `main` and `develop` branches have minimal protection to allow solo development while maintaining code quality.
 
 ---
 
@@ -18,23 +18,16 @@ main
 ### Protection Rules
 
 #### Protect matching branches
-- ✅ **Require a pull request before merging**
-  - ✅ Require approvals: **2**
-  - ✅ Dismiss stale pull request approvals when new commits are pushed
-  - ✅ Require review from Code Owners (if CODEOWNERS file exists)
-  - ❌ Require approval of the most recent reviewable push
+- ❌ **Require a pull request before merging** (Optional - can push directly)
 
 - ✅ **Require status checks to pass before merging**
   - ✅ Require branches to be up to date before merging
   - Required status checks:
-    - `build`
-    - `lint` (if configured)
-    - `test` (if configured)
+    - `build` (must pass on Node 18.x and 20.x)
 
-- ✅ **Require conversation resolution before merging**
-- ✅ **Require signed commits** (optional, recommended for security)
-- ✅ **Require linear history** (prevents merge commits)
-- ✅ **Include administrators** (enforce rules on admins)
+- ❌ **Require conversation resolution before merging**
+- ❌ **Require linear history**
+- ❌ **Include administrators** (allows admin bypass if needed)
 - ❌ Allow force pushes
 - ❌ Allow deletions
 
@@ -50,19 +43,16 @@ develop
 ### Protection Rules
 
 #### Protect matching branches
-- ✅ **Require a pull request before merging**
-  - ✅ Require approvals: **1**
-  - ✅ Dismiss stale pull request approvals when new commits are pushed
-  - ❌ Require review from Code Owners
+- ❌ **Require a pull request before merging** (Optional - can push directly)
 
 - ✅ **Require status checks to pass before merging**
   - ✅ Require branches to be up to date before merging
   - Required status checks:
-    - `build`
+    - `build` (must pass on Node 18.x and 20.x)
 
-- ✅ **Require conversation resolution before merging**
-- ❌ Require linear history (allow merge commits from feature branches)
-- ✅ **Include administrators**
+- ❌ **Require conversation resolution before merging**
+- ❌ **Require linear history**
+- ❌ **Include administrators** (allows admin bypass if needed)
 - ❌ Allow force pushes
 - ❌ Allow deletions
 
@@ -92,65 +82,48 @@ gh auth login
 # Set up protection for main branch
 gh api repos/apexphere/codekid-ai-chess-online/branches/main/protection \
   --method PUT \
-  --field required_status_checks='{"strict":true,"contexts":["build"]}' \
-  --field enforce_admins=true \
-  --field required_pull_request_reviews='{"required_approving_review_count":2,"dismiss_stale_reviews":true}' \
-  --field restrictions=null \
-  --field required_linear_history=true \
-  --field allow_force_pushes=false \
-  --field allow_deletions=false
+  --input - <<'EOF'
+{
+  "required_status_checks": {
+    "strict": true,
+    "checks": [{"context": "build"}]
+  },
+  "enforce_admins": false,
+  "required_pull_request_reviews": null,
+  "restrictions": null,
+  "required_conversation_resolution": false,
+  "allow_force_pushes": false,
+  "allow_deletions": false
+}
+EOF
 
 # Set up protection for develop branch
 gh api repos/apexphere/codekid-ai-chess-online/branches/develop/protection \
   --method PUT \
-  --field required_status_checks='{"strict":true,"contexts":["build"]}' \
-  --field enforce_admins=true \
-  --field required_pull_request_reviews='{"required_approving_review_count":1,"dismiss_stale_reviews":true}' \
-  --field restrictions=null \
-  --field allow_force_pushes=false \
-  --field allow_deletions=false
+  --input - <<'EOF'
+{
+  "required_status_checks": {
+    "strict": true,
+    "checks": [{"context": "build"}]
+  },
+  "enforce_admins": false,
+  "required_pull_request_reviews": null,
+  "restrictions": null,
+  "required_conversation_resolution": false,
+  "allow_force_pushes": false,
+  "allow_deletions": false
+}
+EOF
 ```
 
 ---
 
-## Additional Recommendations
+## Notes
 
-### Create CODEOWNERS file
-Create `.github/CODEOWNERS` to auto-assign reviewers:
-
-```
-# Global owners
-* @apexphere
-
-# Specific paths
-/src/ @apexphere
-/vite.config.js @apexphere
-/package.json @apexphere
-```
-
-### Auto-delete head branches
-Enable in Settings → General → Pull Requests:
-- ✅ Automatically delete head branches
-
-### Required workflows
-Enable in Settings → Actions → General:
-- ✅ Require status checks to pass before merging
-
----
-
-## Troubleshooting
-
-**Q: How do I push to main in an emergency?**
-A: Temporarily disable branch protection (requires admin), push, then re-enable. Better: use hotfix branch.
-
-**Q: CI check is failing but code is fine**
-A: Fix the CI issue. Don't bypass checks.
-
-**Q: Need to force push to clean history**
-A: Only on feature branches. Never on main/develop.
-
-**Q: Can't create branch protection rules**
-A: Ensure you have admin access to the repository.
+- PRs are optional but recommended for tracking changes
+- No approval required - you can merge your own PRs once build passes
+- The `build` check ensures code compiles on Node 18.x and 20.x
+- Branch protection can be adjusted later as the project grows
 
 ---
 
