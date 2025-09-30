@@ -33,6 +33,10 @@ let originalSquare = null;
 let boardState = JSON.parse(JSON.stringify(initialBoard));
 let currentPlayer = 'white';
 
+// Click-to-move state
+let selectedPiece = null;
+let selectedSquare = null;
+
 const pieceValues = {
     'pawn': 1,
     'knight': 3,
@@ -69,7 +73,7 @@ let currentHintHighlight = null;
 
 function initializeStockfish() {
     if (!stockfishWorker) {
-        stockfishWorker = new Worker('./stockfish.js');
+        stockfishWorker = new Worker('/stockfish.js');
 
         // Initialize UCI protocol properly
         stockfishWorker.postMessage('uci');
@@ -84,6 +88,66 @@ let hasMoved = {
 };
 
 let enPassantTarget = null;
+
+// localStorage utility functions
+function saveGameState() {
+    const gameState = {
+        boardState,
+        currentPlayer,
+        capturedPieces,
+        score,
+        moveHistory,
+        gameMode,
+        hasMoved,
+        enPassantTarget,
+        hintsRemaining,
+        gameOver
+    };
+    try {
+        localStorage.setItem('chessGameState', JSON.stringify(gameState));
+    } catch (e) {
+        console.error('Failed to save game state to localStorage:', e);
+    }
+}
+
+function loadGameState() {
+    try {
+        const savedState = localStorage.getItem('chessGameState');
+        if (savedState) {
+            const parsedState = JSON.parse(savedState);
+            boardState = parsedState.boardState;
+            currentPlayer = parsedState.currentPlayer;
+            capturedPieces = parsedState.capturedPieces;
+            score = parsedState.score;
+            moveHistory = parsedState.moveHistory;
+            gameMode = parsedState.gameMode;
+            hasMoved = parsedState.hasMoved;
+            enPassantTarget = parsedState.enPassantTarget;
+            hintsRemaining = parsedState.hintsRemaining;
+            gameOver = parsedState.gameOver;
+            return true;
+        }
+    } catch (e) {
+        console.error('Failed to load game state from localStorage:', e);
+    }
+    return false;
+}
+
+function clearSavedGame() {
+    try {
+        localStorage.removeItem('chessGameState');
+    } catch (e) {
+        console.error('Failed to clear saved game from localStorage:', e);
+    }
+}
+
+function hasSavedGame() {
+    try {
+        return localStorage.getItem('chessGameState') !== null;
+    } catch (e) {
+        return false;
+    }
+}
 
 function getPieceInfo(piece) {
     const pieceMap = {
@@ -271,6 +335,78 @@ function isValidKingMove(fromRow, fromCol, toRow, toCol) {
     return false;
 }
 
+function canPieceAttackSquare(piece, fromRow, fromCol, toRow, toCol, board) {
+    const pieceInfo = getPieceInfo(piece);
+    if (!pieceInfo) return false;
+
+    const rowDiff = Math.abs(toRow - fromRow);
+    const colDiff = Math.abs(toCol - fromCol);
+
+    switch (pieceInfo.type) {
+        case 'queen':
+            // Queen moves like rook + bishop
+            return canRookAttack(fromRow, fromCol, toRow, toCol, board) ||
+                   canBishopAttack(fromRow, fromCol, toRow, toCol, board);
+
+        case 'rook':
+            return canRookAttack(fromRow, fromCol, toRow, toCol, board);
+
+        case 'bishop':
+            return canBishopAttack(fromRow, fromCol, toRow, toCol, board);
+
+        case 'knight':
+            // Knight moves in L-shape
+            return (rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2);
+
+        case 'king':
+            // King moves one square in any direction
+            return rowDiff <= 1 && colDiff <= 1 && (rowDiff + colDiff) > 0;
+
+        default:
+            return false;
+    }
+}
+
+function canRookAttack(fromRow, fromCol, toRow, toCol, board) {
+    // Rook attacks along rows or columns
+    if (fromRow !== toRow && fromCol !== toCol) return false;
+
+    // Check if path is clear
+    const rowStep = fromRow === toRow ? 0 : (toRow > fromRow ? 1 : -1);
+    const colStep = fromCol === toCol ? 0 : (toCol > fromCol ? 1 : -1);
+
+    let row = fromRow + rowStep;
+    let col = fromCol + colStep;
+
+    while (row !== toRow || col !== toCol) {
+        if (board[row][col] !== null) return false;
+        row += rowStep;
+        col += colStep;
+    }
+
+    return true;
+}
+
+function canBishopAttack(fromRow, fromCol, toRow, toCol, board) {
+    // Bishop attacks along diagonals
+    if (Math.abs(toRow - fromRow) !== Math.abs(toCol - fromCol)) return false;
+
+    // Check if path is clear
+    const rowStep = toRow > fromRow ? 1 : -1;
+    const colStep = toCol > fromCol ? 1 : -1;
+
+    let row = fromRow + rowStep;
+    let col = fromCol + colStep;
+
+    while (row !== toRow || col !== toCol) {
+        if (board[row][col] !== null) return false;
+        row += rowStep;
+        col += colStep;
+    }
+
+    return true;
+}
+
 function isKingInCheck(color, testBoardState = null) {
     const board = testBoardState || boardState;
     let kingRow = -1;
@@ -308,12 +444,11 @@ function isKingInCheck(color, testBoardState = null) {
                             return true;
                         }
                     } else {
-                        // For other pieces, use the normal isValidMove but temporarily ignore the king
-                        const tempKing = board[kingRow][kingCol];
-                        board[kingRow][kingCol] = null;
-                        const canAttack = isValidMove(piece, row, col, kingRow, kingCol);
-                        board[kingRow][kingCol] = tempKing;
-                        if (canAttack) return true;
+                        // For other pieces, check if they can attack the king
+                        // We need to check attack patterns directly without mutating the board
+                        if (canPieceAttackSquare(piece, row, col, kingRow, kingCol, board)) {
+                            return true;
+                        }
                     }
                 }
             }
@@ -481,41 +616,87 @@ function showNotYourTurnMessage() {
 function playTurnSwitchSound() {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-    const oscillator = audioContext.createOscillator();
+    // Solid wooden piece placement sound
+    const bufferSize = audioContext.sampleRate * 0.12;
+    const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    // Generate white noise with emphasis on initial impact
+    for (let i = 0; i < bufferSize; i++) {
+        const decay = Math.exp(-i / (bufferSize * 0.15));
+        data[i] = (Math.random() * 2 - 1) * decay;
+    }
+
+    const noise = audioContext.createBufferSource();
+    noise.buffer = buffer;
+
+    // Lower frequency for more solid wood sound
+    const filter = audioContext.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(600, audioContext.currentTime);
+    filter.Q.setValueAtTime(3, audioContext.currentTime);
+
+    // Add some low-end body
+    const lowFilter = audioContext.createBiquadFilter();
+    lowFilter.type = 'lowpass';
+    lowFilter.frequency.setValueAtTime(300, audioContext.currentTime);
+    lowFilter.Q.setValueAtTime(1, audioContext.currentTime);
+
     const gainNode = audioContext.createGain();
 
-    oscillator.connect(gainNode);
+    noise.connect(filter);
+    filter.connect(lowFilter);
+    lowFilter.connect(gainNode);
     gainNode.connect(audioContext.destination);
 
-    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.1);
+    gainNode.gain.setValueAtTime(1.0, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
 
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-
-    oscillator.type = 'sine';
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.2);
+    noise.start(audioContext.currentTime);
+    noise.stop(audioContext.currentTime + 0.1);
 }
 
 function playCaptureSound() {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-    const oscillator = audioContext.createOscillator();
+    // Heavy wooden piece collision sound
+    const bufferSize = audioContext.sampleRate * 0.18;
+    const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+
+    // Generate white noise with strong initial impact
+    for (let i = 0; i < bufferSize; i++) {
+        const decay = Math.exp(-i / (bufferSize * 0.2));
+        data[i] = (Math.random() * 2 - 1) * decay;
+    }
+
+    const noise = audioContext.createBufferSource();
+    noise.buffer = buffer;
+
+    // Mid-range for wood collision
+    const midFilter = audioContext.createBiquadFilter();
+    midFilter.type = 'bandpass';
+    midFilter.frequency.setValueAtTime(900, audioContext.currentTime);
+    midFilter.Q.setValueAtTime(4, audioContext.currentTime);
+
+    // Strong low-end for solid impact
+    const lowFilter = audioContext.createBiquadFilter();
+    lowFilter.type = 'lowpass';
+    lowFilter.frequency.setValueAtTime(250, audioContext.currentTime);
+    lowFilter.Q.setValueAtTime(2, audioContext.currentTime);
+
     const gainNode = audioContext.createGain();
 
-    oscillator.connect(gainNode);
+    noise.connect(midFilter);
+    midFilter.connect(lowFilter);
+    lowFilter.connect(gainNode);
     gainNode.connect(audioContext.destination);
 
-    oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.3);
+    gainNode.gain.setValueAtTime(1.2, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
 
-    gainNode.gain.setValueAtTime(0.4, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-
-    oscillator.type = 'sawtooth';
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.3);
+    noise.start(audioContext.currentTime);
+    noise.stop(audioContext.currentTime + 0.15);
 }
 
 function capturePiece(capturedPieceElement, capturingPlayer) {
@@ -558,7 +739,6 @@ function saveMove(fromRow, fromCol, toRow, toCol, piece, capturedPiece, specialM
         piece: piece,
         capturedPiece: capturedPiece,
         specialMove: specialMove,
-        boardState: JSON.parse(JSON.stringify(boardState)),
         currentPlayer: currentPlayer,
         capturedPieces: JSON.parse(JSON.stringify(capturedPieces)),
         score: { ...score },
@@ -567,20 +747,102 @@ function saveMove(fromRow, fromCol, toRow, toCol, piece, capturedPiece, specialM
     };
     moveHistory.push(move);
     updateUndoButton();
+    updateMoveHistoryDisplay();
+}
+
+function updateMoveHistoryDisplay() {
+    const historyContainer = document.getElementById('moveHistory');
+    if (!historyContainer) return;
+
+    if (moveHistory.length === 0) {
+        historyContainer.innerHTML = '<div class="no-moves">No moves yet. Make your first move!</div>';
+        return;
+    }
+
+    historyContainer.innerHTML = '';
+
+    // Display moves in pairs (White, Black)
+    for (let i = 0; i < moveHistory.length; i += 2) {
+        const moveWhite = moveHistory[i];
+        const moveBlack = moveHistory[i + 1];
+        const moveNumber = Math.floor(i / 2) + 1;
+
+        const movePair = document.createElement('div');
+        movePair.className = 'move-pair';
+
+        const moveNumberEl = document.createElement('div');
+        moveNumberEl.className = 'move-number';
+        moveNumberEl.textContent = moveNumber + '.';
+        movePair.appendChild(moveNumberEl);
+
+        // White's move
+        const whiteMoveEl = createMoveElement(moveWhite, 'white');
+        movePair.appendChild(whiteMoveEl);
+
+        // Black's move (if exists)
+        if (moveBlack) {
+            const blackMoveEl = createMoveElement(moveBlack, 'black');
+            movePair.appendChild(blackMoveEl);
+        }
+
+        historyContainer.appendChild(movePair);
+    }
+
+    // Auto-scroll to bottom
+    historyContainer.scrollTop = historyContainer.scrollHeight;
+}
+
+function createMoveElement(move, color) {
+    const moveEl = document.createElement('div');
+    moveEl.className = `move-item ${color}-move`;
+
+    const pieceEl = document.createElement('span');
+    pieceEl.className = 'move-piece';
+    pieceEl.textContent = move.piece;
+
+    const notationEl = document.createElement('span');
+    notationEl.className = 'move-notation';
+    notationEl.textContent = getMoveNotation(move);
+
+    moveEl.appendChild(pieceEl);
+    moveEl.appendChild(notationEl);
+
+    if (move.capturedPiece) {
+        const captureEl = document.createElement('span');
+        captureEl.className = 'move-capture';
+        captureEl.textContent = '✕' + move.capturedPiece;
+        moveEl.appendChild(captureEl);
+    }
+
+    return moveEl;
+}
+
+function getMoveNotation(move) {
+    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    const fromFile = files[move.from.col];
+    const fromRank = 8 - move.from.row;
+    const toFile = files[move.to.col];
+    const toRank = 8 - move.to.row;
+
+    // Special move notations
+    if (move.specialMove === 'castleKingside') {
+        return 'O-O';
+    }
+    if (move.specialMove === 'castleQueenside') {
+        return 'O-O-O';
+    }
+
+    return `${fromFile}${fromRank}→${toFile}${toRank}`;
 }
 
 function undoLastMove() {
     if (moveHistory.length === 0 || gameOver || awaitingPromotion) return;
 
-    const lastMove = moveHistory.pop();
+    // Remove the last move
+    moveHistory.pop();
 
-    // Restore board state
-    boardState = JSON.parse(JSON.stringify(lastMove.boardState));
-    currentPlayer = lastMove.currentPlayer;
-    capturedPieces = JSON.parse(JSON.stringify(lastMove.capturedPieces));
-    score = { ...lastMove.score };
-    hasMoved = JSON.parse(JSON.stringify(lastMove.hasMoved));
-    enPassantTarget = lastMove.enPassantTarget ? { ...lastMove.enPassantTarget } : null;
+    // Reconstruct game state by replaying all remaining moves from the beginning
+    reconstructGameStateFromHistory();
 
     // Rebuild the visual board
     rebuildBoard();
@@ -590,6 +852,105 @@ function undoLastMove() {
     updateCapturedPiecesDisplay();
     highlightNearPromotionPawns();
     updateUndoButton();
+    updateMoveHistoryDisplay();
+}
+
+function reconstructGameStateFromHistory() {
+    // Reset to initial state
+    boardState = JSON.parse(JSON.stringify(initialBoard));
+    currentPlayer = 'white';
+    capturedPieces = { white: [], black: [] };
+    score = { white: 0, black: 0 };
+    hasMoved = {
+        white: { king: false, rookLeft: false, rookRight: false },
+        black: { king: false, rookLeft: false, rookRight: false }
+    };
+    enPassantTarget = null;
+
+    // Replay all moves
+    for (const move of moveHistory) {
+        applyMoveToState(move);
+    }
+}
+
+function applyMoveToState(move) {
+    const { from, to, piece, capturedPiece, specialMove } = move;
+
+    // Handle captures
+    if (capturedPiece) {
+        const capturedInfo = getPieceInfo(capturedPiece);
+        if (capturedInfo) {
+            capturedPieces[capturedInfo.color].push(capturedPiece);
+            score[capturedInfo.color === 'white' ? 'black' : 'white'] += pieceValues[capturedInfo.type];
+        }
+    }
+
+    // Handle special moves
+    if (specialMove === 'castling') {
+        // Move king
+        boardState[to.row][to.col] = piece;
+        boardState[from.row][from.col] = null;
+
+        // Move rook
+        const isKingside = to.col > from.col;
+        const rookFromCol = isKingside ? 7 : 0;
+        const rookToCol = isKingside ? 5 : 3;
+        const rookPiece = boardState[from.row][rookFromCol];
+        boardState[from.row][rookToCol] = rookPiece;
+        boardState[from.row][rookFromCol] = null;
+
+        const pieceInfo = getPieceInfo(piece);
+        hasMoved[pieceInfo.color].king = true;
+        hasMoved[pieceInfo.color][isKingside ? 'rookRight' : 'rookLeft'] = true;
+        enPassantTarget = null;
+    } else if (specialMove === 'enPassant') {
+        // Move pawn
+        boardState[to.row][to.col] = piece;
+        boardState[from.row][from.col] = null;
+
+        // Remove captured pawn
+        const capturedPawnRow = from.row;
+        const capturedPawnCol = to.col;
+        const capturedPawn = boardState[capturedPawnRow][capturedPawnCol];
+        if (capturedPawn) {
+            const capturedInfo = getPieceInfo(capturedPawn);
+            capturedPieces[capturedInfo.color].push(capturedPawn);
+            score[move.currentPlayer] += pieceValues['pawn'];
+            boardState[capturedPawnRow][capturedPawnCol] = null;
+        }
+        enPassantTarget = null;
+    } else {
+        // Normal move
+        boardState[to.row][to.col] = piece;
+        boardState[from.row][from.col] = null;
+
+        const pieceInfo = getPieceInfo(piece);
+        if (pieceInfo) {
+            // Track piece movement for castling rights
+            if (pieceInfo.type === 'king') {
+                hasMoved[pieceInfo.color].king = true;
+            } else if (pieceInfo.type === 'rook') {
+                const correctRow = pieceInfo.color === 'white' ? 7 : 0;
+                if (from.row === correctRow) {
+                    if (from.col === 0) hasMoved[pieceInfo.color].rookLeft = true;
+                    if (from.col === 7) hasMoved[pieceInfo.color].rookRight = true;
+                }
+            }
+
+            // Track en passant
+            if (pieceInfo.type === 'pawn' && Math.abs(to.row - from.row) === 2) {
+                enPassantTarget = {
+                    row: from.row + (to.row - from.row) / 2,
+                    col: to.col
+                };
+            } else {
+                enPassantTarget = null;
+            }
+        }
+    }
+
+    // Switch turn
+    currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
 }
 
 function rebuildBoard() {
@@ -603,6 +964,9 @@ function rebuildBoard() {
             square.className += (row + col) % 2 === 0 ? ' light' : ' dark';
             square.dataset.row = row;
             square.dataset.col = col;
+
+            // Add click event listener for click-to-move
+            square.addEventListener('click', handleSquareClick);
 
             const piece = boardState[row][col];
             if (piece) {
@@ -642,6 +1006,8 @@ function resetGame() {
     restartGame();
     moveHistory = [];
     updateUndoButton();
+    updateMoveHistoryDisplay();
+    clearSavedGame();
 }
 
 function showGameModeModal() {
@@ -662,9 +1028,38 @@ function selectGameMode(mode) {
     gameMode = mode;
     hideGameModeModal();
 
+    // Clear any saved game state when starting a new game
+    clearSavedGame();
+
     // Update the turn indicator if playing with AI
     if (gameMode.startsWith('ai-')) {
         updateTurnIndicator();
+    }
+}
+
+function continueGame() {
+    if (loadGameState()) {
+        hideGameModeModal();
+
+        // Rebuild the board with saved state
+        createBoard();
+        updateTurnIndicator();
+        updatePieceGlow();
+        updateScoreboard();
+        highlightNearPromotionPawns();
+        updateUndoButton();
+        updateMoveHistoryDisplay();
+        updateHintButton();
+
+        // Initialize Stockfish if it's an AI game
+        if (gameMode.startsWith('ai-')) {
+            initializeStockfish();
+
+            // If it was AI's turn when saved, let it make a move
+            if (currentPlayer === 'black' && !gameOver && !awaitingPromotion) {
+                setTimeout(makeComputerMove, 500);
+            }
+        }
     }
 }
 
@@ -684,7 +1079,10 @@ function getAllValidMovesForPlayer(color) {
                         testBoard[row][col] = null;
                         testBoard[move.row][move.col] = piece;
 
-                        if (!isKingInCheck(color, testBoard)) {
+                        const stillInCheck = isKingInCheck(color, testBoard);
+
+                        if (!stillInCheck) {
+                            console.log('Valid move found:', piece, 'from', {row, col}, 'to', move, 'still in check:', stillInCheck);
                             validMoves.push({
                                 from: { row, col },
                                 to: { row: move.row, col: move.col },
@@ -698,6 +1096,20 @@ function getAllValidMovesForPlayer(color) {
     }
 
     return validMoves;
+}
+
+function isCheckmate(color) {
+    // Checkmate = king is in check AND no valid moves
+    if (!isKingInCheck(color)) return false;
+    const validMoves = getAllValidMovesForPlayer(color);
+    return validMoves.length === 0;
+}
+
+function isStalemate(color) {
+    // Stalemate = king is NOT in check AND no valid moves
+    if (isKingInCheck(color)) return false;
+    const validMoves = getAllValidMovesForPlayer(color);
+    return validMoves.length === 0;
 }
 
 function makeComputerMove() {
@@ -941,20 +1353,20 @@ function executeStockfishMove(move) {
         boardState[toRow][toCol] = promotionPiece;
     }
 
-    // Add to move history
-    moveHistory.push({
-        from: { row: fromRow, col: fromCol },
-        to: { row: toRow, col: toCol },
-        piece: piece,
-        capturedPiece: targetPiece,
-        boardState: JSON.parse(JSON.stringify(boardState)),
-        enPassantTarget: enPassantTarget
-    });
+    // Determine special move type
+    let specialMove = null;
+    if (pieceInfo && pieceInfo.type === 'king' && Math.abs(toCol - fromCol) === 2) {
+        specialMove = 'castling';
+    } else if (pieceInfo && pieceInfo.type === 'pawn' && Math.abs(toCol - fromCol) === 1 && !targetPiece) {
+        specialMove = 'enPassant';
+    }
+
+    // Save move to history using the standard function
+    saveMove(fromRow, fromCol, toRow, toCol, promotion ? boardState[toRow][toCol] : piece, targetPiece, specialMove);
 
     // Update the visual board
     rebuildBoard();
     updateCapturedPiecesDisplay();
-    updateUndoButton();
 
     // Check for checkmate (simplified - just check if king can be captured)
     // In a full implementation, you'd check for actual checkmate conditions
@@ -1021,9 +1433,39 @@ function switchTurn() {
     updatePieceGlow();
     highlightNearPromotionPawns();
     playTurnSwitchSound();
+    updateMoveHistoryDisplay();
 
     // Clear hints when turn switches
     clearHintsOnMove();
+
+    // Check for checkmate or stalemate
+    console.log('Checking game end conditions for', currentPlayer);
+    const inCheck = isKingInCheck(currentPlayer);
+    const validMoves = getAllValidMovesForPlayer(currentPlayer);
+    console.log('In check:', inCheck, 'Valid moves:', validMoves.length);
+
+    if (isCheckmate(currentPlayer)) {
+        const winner = currentPlayer === 'white' ? 'black' : 'white';
+        console.log('CHECKMATE! Winner:', winner);
+        handleVictory(winner);
+        return;
+    }
+
+    if (isStalemate(currentPlayer)) {
+        console.log('STALEMATE!');
+        handleStalemate();
+        return;
+    }
+
+    // Save game state after each move
+    // In AI mode, skip saving when switching TO AI's turn (will save after AI completes move)
+    // In Friend mode, always save
+    if (!gameMode.startsWith('ai-') || currentPlayer !== 'black') {
+        console.log('Saving game state. Current player:', currentPlayer, 'Move history length:', moveHistory.length);
+        saveGameState();
+    } else {
+        console.log('Skipping save. Current player:', currentPlayer, 'Move history length:', moveHistory.length);
+    }
 
     // If it's the computer's turn in AI mode, make a move
     if (gameMode.startsWith('ai-') && currentPlayer === 'black' && !gameOver && !awaitingPromotion) {
@@ -1055,6 +1497,17 @@ function updatePieceGlow() {
 
 function createBoard() {
     const board = document.getElementById('board');
+    const wrapper = board.parentElement;
+
+    // Clear existing board content
+    board.innerHTML = '';
+
+    // Clear existing coordinate labels
+    const existingCoordinates = wrapper.querySelectorAll('.board-coordinates');
+    existingCoordinates.forEach(coord => coord.remove());
+
+    // Use boardState instead of initialBoard to support loading saved games
+    const currentBoardState = boardState || initialBoard;
 
     for (let row = 0; row < 8; row++) {
         for (let col = 0; col < 8; col++) {
@@ -1064,7 +1517,10 @@ function createBoard() {
             square.dataset.row = row;
             square.dataset.col = col;
 
-            const piece = initialBoard[row][col];
+            // Add click event listener for click-to-move
+            square.addEventListener('click', handleSquareClick);
+
+            const piece = currentBoardState[row][col];
             if (piece) {
                 const pieceElement = document.createElement('div');
                 pieceElement.className = 'piece';
@@ -1076,6 +1532,196 @@ function createBoard() {
             board.appendChild(square);
         }
     }
+
+    // Add rank labels (8-1)
+    for (let row = 0; row < 8; row++) {
+        const rankLabel = document.createElement('div');
+        rankLabel.className = 'board-coordinates rank-label';
+        rankLabel.textContent = 8 - row;
+        rankLabel.style.top = (13 + row * 80) + 'px';
+        wrapper.appendChild(rankLabel);
+    }
+
+    // Add file labels (a-h)
+    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    for (let col = 0; col < 8; col++) {
+        const fileLabel = document.createElement('div');
+        fileLabel.className = 'board-coordinates file-label';
+        fileLabel.textContent = files[col];
+        fileLabel.style.left = (13 + col * 80) + 'px';
+        wrapper.appendChild(fileLabel);
+    }
+}
+
+function handleSquareClick(e) {
+    if (gameOver || awaitingPromotion) {
+        return;
+    }
+
+    // Prevent clicking during computer's turn in AI mode
+    if (gameMode.startsWith('ai-') && currentPlayer === 'black') {
+        return;
+    }
+
+    const square = e.target.classList.contains('square') ? e.target : e.target.parentElement;
+    if (!square || !square.classList.contains('square')) {
+        return;
+    }
+
+    const clickedRow = parseInt(square.dataset.row);
+    const clickedCol = parseInt(square.dataset.col);
+    const clickedPiece = boardState[clickedRow][clickedCol];
+
+    // If no piece is selected
+    if (!selectedPiece) {
+        // Check if clicked square has a piece of current player
+        if (clickedPiece) {
+            const pieceInfo = getPieceInfo(clickedPiece);
+            if (pieceInfo && pieceInfo.color === currentPlayer) {
+                // Select this piece
+                selectedPiece = clickedPiece;
+                selectedSquare = { row: clickedRow, col: clickedCol };
+
+                // Add visual highlight
+                square.classList.add('selected');
+
+                // Show valid moves
+                highlightValidMoves(clickedPiece, clickedRow, clickedCol);
+            } else {
+                showNotYourTurnMessage();
+            }
+        }
+    } else {
+        // A piece is already selected
+        const fromRow = selectedSquare.row;
+        const fromCol = selectedSquare.col;
+
+        // Check if clicking on the same piece (deselect)
+        if (clickedRow === fromRow && clickedCol === fromCol) {
+            clearSelection();
+            return;
+        }
+
+        // Check if clicking on another piece of the same color (change selection)
+        if (clickedPiece) {
+            const pieceInfo = getPieceInfo(clickedPiece);
+            if (pieceInfo && pieceInfo.color === currentPlayer) {
+                clearSelection();
+                // Select the new piece
+                selectedPiece = clickedPiece;
+                selectedSquare = { row: clickedRow, col: clickedCol };
+                square.classList.add('selected');
+                highlightValidMoves(clickedPiece, clickedRow, clickedCol);
+                return;
+            }
+        }
+
+        // Try to move to the clicked square
+        if (isValidMove(selectedPiece, fromRow, fromCol, clickedRow, clickedCol)) {
+            executeMoveFromClick(fromRow, fromCol, clickedRow, clickedCol, selectedPiece);
+            clearSelection();
+        } else {
+            // Invalid move, deselect
+            clearSelection();
+        }
+    }
+}
+
+function clearSelection() {
+    // Remove selected highlight
+    const selectedSquares = document.querySelectorAll('.square.selected');
+    selectedSquares.forEach(sq => sq.classList.remove('selected'));
+
+    // Clear valid move indicators
+    clearValidMoves();
+
+    // Reset state
+    selectedPiece = null;
+    selectedSquare = null;
+}
+
+function executeMoveFromClick(fromRow, fromCol, toRow, toCol, piece) {
+    const targetPiece = boardState[toRow][toCol];
+
+    // Handle capture
+    if (targetPiece) {
+        capturePiece(targetPiece, currentPlayer);
+    }
+
+    // Check move type
+    const pieceInfo = getPieceInfo(piece);
+    const isCastling = pieceInfo && pieceInfo.type === 'king' && Math.abs(toCol - fromCol) === 2;
+    const isEnPassant = pieceInfo && pieceInfo.type === 'pawn' &&
+                       boardState[toRow][toCol] === null && Math.abs(toCol - fromCol) === 1;
+
+    // Save move to history
+    saveMove(fromRow, fromCol, toRow, toCol, piece, targetPiece, isCastling ? 'castling' : isEnPassant ? 'enPassant' : null);
+
+    if (isCastling) {
+        executeCastlingLogic(fromRow, fromCol, toRow, toCol);
+    } else if (isEnPassant) {
+        executeEnPassantLogic(fromRow, fromCol, toRow, toCol);
+    } else {
+        // Regular move
+        boardState[toRow][toCol] = piece;
+        boardState[fromRow][fromCol] = null;
+    }
+
+    // Update hasMoved flags for castling rights
+    if (pieceInfo) {
+        if (pieceInfo.type === 'king') {
+            hasMoved[pieceInfo.color].king = true;
+        } else if (pieceInfo.type === 'rook') {
+            if (fromCol === 0) hasMoved[pieceInfo.color].rookLeft = true;
+            if (fromCol === 7) hasMoved[pieceInfo.color].rookRight = true;
+        }
+    }
+
+    // Update en passant target
+    enPassantTarget = null;
+    if (pieceInfo && pieceInfo.type === 'pawn' && Math.abs(toRow - fromRow) === 2) {
+        enPassantTarget = { row: (fromRow + toRow) / 2, col: fromCol };
+    }
+
+    // Check for pawn promotion
+    if (pieceInfo && pieceInfo.type === 'pawn' && (toRow === 0 || toRow === 7)) {
+        awaitingPromotion = true;
+        promotionData = { row: toRow, col: toCol, color: pieceInfo.color };
+        showPromotionModal(pieceInfo.color);
+    } else {
+        switchTurn();
+    }
+
+    // Rebuild board to show changes
+    rebuildBoard();
+    updateMoveHistoryDisplay();
+    updateUndoButton();
+}
+
+function executeCastlingLogic(fromRow, fromCol, toRow, toCol) {
+    // Move the king
+    boardState[toRow][toCol] = boardState[fromRow][fromCol];
+    boardState[fromRow][fromCol] = null;
+
+    // Move the rook
+    if (toCol === 6) { // Kingside
+        boardState[toRow][5] = boardState[toRow][7];
+        boardState[toRow][7] = null;
+    } else if (toCol === 2) { // Queenside
+        boardState[toRow][3] = boardState[toRow][0];
+        boardState[toRow][0] = null;
+    }
+}
+
+function executeEnPassantLogic(fromRow, fromCol, toRow, toCol) {
+    // Move the pawn
+    boardState[toRow][toCol] = boardState[fromRow][fromCol];
+    boardState[fromRow][fromCol] = null;
+
+    // Capture the enemy pawn
+    const capturedPawn = boardState[fromRow][toCol];
+    capturePiece(capturedPawn, currentPlayer);
+    boardState[fromRow][toCol] = null;
 }
 
 function handleDragStart(e) {
@@ -1103,6 +1749,9 @@ function handleDragStart(e) {
             }, 500);
             return;
         }
+
+        // Clear any click-to-move selection when starting to drag
+        clearSelection();
 
         draggedPiece = e.target;
         originalSquare = e.target.parentElement;
@@ -1240,6 +1889,11 @@ function handleVictory(winner) {
     showVictoryMessage(winner);
 }
 
+function handleStalemate() {
+    gameOver = true;
+    showStalemateMessage();
+}
+
 function playVictoryMusic() {
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -1309,6 +1963,24 @@ function showVictoryMessage(winner) {
     const message = document.createElement('div');
     message.className = 'victory-message';
     message.innerHTML = `CHECKMATE!<br>${winner.toUpperCase()} WINS!`;
+
+    const playAgainBtn = document.createElement('button');
+    playAgainBtn.className = 'play-again-btn';
+    playAgainBtn.textContent = 'Play Again?';
+    playAgainBtn.onclick = restartGame;
+
+    overlay.appendChild(message);
+    overlay.appendChild(playAgainBtn);
+    document.body.appendChild(overlay);
+}
+
+function showStalemateMessage() {
+    const overlay = document.createElement('div');
+    overlay.className = 'victory-overlay';
+
+    const message = document.createElement('div');
+    message.className = 'victory-message';
+    message.innerHTML = `STALEMATE!<br>IT'S A DRAW!`;
 
     const playAgainBtn = document.createElement('button');
     playAgainBtn.className = 'play-again-btn';
@@ -1510,6 +2182,7 @@ function restartGame() {
     boardState = JSON.parse(JSON.stringify(initialBoard));
     capturedPieces = { 'white': [], 'black': [] };
     score = { 'white': 0, 'black': 0 };
+    moveHistory = [];
 
     // Reset castling tracking
     hasMoved = {
@@ -1544,6 +2217,10 @@ function restartGame() {
     hintsRemaining = 3;
     updateHintButton();
     clearHintHighlight();
+
+    // Clear move history display
+    updateMoveHistoryDisplay();
+    updateUndoButton();
 }
 
 // Visual Hint System Functions
@@ -1735,6 +2412,15 @@ styleSheet.textContent = `
 document.head.appendChild(styleSheet);
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Check if there's a saved game
+    if (hasSavedGame()) {
+        // Show continue button
+        const continueBtn = document.getElementById('continueGameBtn');
+        if (continueBtn) {
+            continueBtn.style.display = 'block';
+        }
+    }
+
     // Show game mode selection modal on start
     showGameModeModal();
 
@@ -1759,6 +2445,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('hintBtn').addEventListener('click', getHint);
 
     // Add game mode selection event listeners
+    document.getElementById('continueGameBtn').addEventListener('click', continueGame);
     document.getElementById('friendModeBtn').addEventListener('click', () => selectGameMode('friend'));
     document.getElementById('aiEasyBtn').addEventListener('click', () => selectGameMode('ai-easy'));
     document.getElementById('aiMediumBtn').addEventListener('click', () => selectGameMode('ai-medium'));

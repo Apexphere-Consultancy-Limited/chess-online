@@ -3,73 +3,252 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess Board</title>
-    <link rel="stylesheet" href="./style.css">
+    <title>Chess Online - Play Chess Free</title>
+    <link rel="stylesheet" href="/src/styles/home.css">
 </head>
 <body>
-    <!-- Game Mode Selection Modal -->
-    <div class="game-mode-modal" id="gameModeModal">
-        <div class="game-mode-dialog">
-            <div class="game-mode-title">🏁 Choose Game Mode</div>
-            <div class="game-mode-subtitle">
-                Select how you want to play this chess game!
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <span class="logo">♔</span>
+                <span class="brand-name">Chess Online</span>
             </div>
-            <div class="game-mode-buttons">
-                <button class="mode-btn" id="friendModeBtn">
-                    <div class="mode-title">👥 Play with Friend</div>
-                    <div class="mode-description">Two human players take turns</div>
-                </button>
-                <button class="mode-btn" id="aiEasyBtn">
-                    <div class="mode-title">🤖 Play with AI (Easy)</div>
-                    <div class="mode-description">Challenge the computer - it makes random moves!</div>
-                </button>
-                <button class="mode-btn" id="aiMediumBtn">
-                    <div class="mode-title">🧠 Play with AI (Medium)</div>
-                    <div class="mode-description">Stockfish engine with moderate thinking depth</div>
-                </button>
-                <button class="mode-btn" id="aiHardBtn">
-                    <div class="mode-title">🔥 Play with AI (Hard)</div>
-                    <div class="mode-description">Stockfish engine with deep analysis - very challenging!</div>
-                </button>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#about">About</a>
+                <a href="/game" class="btn-play-nav">Play Now</a>
             </div>
         </div>
-    </div>
+    </nav>
 
-    <div class="game-container">
-        <div class="turn-indicator white-turn" id="turnIndicator">
-            White's Turn!
-        </div>
-
-        <div class="game-layout">
-            <div class="captured-pieces left-captures">
-                <h3>White's Captured Pieces</h3>
-                <div class="captured-list" id="whiteCaptures"></div>
-                <div class="score-display">
-                    <div class="player-name">White Score</div>
-                    <div class="points" id="whiteScore">0 points</div>
-                </div>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title">
+                Play Chess <span class="highlight">Online</span>
+            </h1>
+            <p class="hero-subtitle">
+                Challenge friends or test your skills against our AI. Free, fast, and fun chess for everyone.
+            </p>
+            <div class="hero-buttons">
+                <a href="/game" class="btn-primary">
+                    <span>Play Online</span>
+                    <svg class="btn-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </a>
+                <a href="#features" class="btn-secondary">Learn More</a>
             </div>
-
-            <div class="board-container">
-                <div class="chess-board" id="board"></div>
-                <div class="game-controls">
-                    <button class="control-btn" id="undoBtn" disabled>Undo Move</button>
-                    <button class="control-btn hint-btn" id="hintBtn">💡 Get Hint (<span id="hintsLeft">3</span> left)</button>
-                    <button class="control-btn reset-btn" id="resetBtn">Reset Game</button>
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">Game Modes</div>
                 </div>
-            </div>
-
-            <div class="captured-pieces right-captures">
-                <h3>Black's Captured Pieces</h3>
-                <div class="captured-list" id="blackCaptures"></div>
-                <div class="score-display">
-                    <div class="player-name">Black Score</div>
-                    <div class="points" id="blackScore">0 points</div>
+                <div class="stat-item">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">Free to Play</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">∞</div>
+                    <div class="stat-label">Unlimited Games</div>
                 </div>
             </div>
         </div>
-    </div>
+        <div class="hero-visual">
+            <div class="floating-board">
+                <div class="mini-board">
+                    <div class="mini-square light">♔</div>
+                    <div class="mini-square dark"></div>
+                    <div class="mini-square light"></div>
+                    <div class="mini-square dark">♟</div>
+                    <div class="mini-square dark"></div>
+                    <div class="mini-square light">♜</div>
+                    <div class="mini-square dark"></div>
+                    <div class="mini-square light"></div>
+                    <div class="mini-square light"></div>
+                    <div class="mini-square dark">♙</div>
+                    <div class="mini-square light"></div>
+                    <div class="mini-square dark"></div>
+                    <div class="mini-square dark">♞</div>
+                    <div class="mini-square light"></div>
+                    <div class="mini-square dark"></div>
+                    <div class="mini-square light">♕</div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-    <script type="module" src="./main.js"></script>
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <h2 class="section-title">Why Choose Chess Online?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">👥</div>
+                    <h3 class="feature-title">Play with Friends</h3>
+                    <p class="feature-description">
+                        Challenge a friend on the same device. Perfect for learning and casual games.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3 class="feature-title">AI Opponents</h3>
+                    <p class="feature-description">
+                        Play against our AI with multiple difficulty levels, from beginner to advanced.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💡</div>
+                    <h3 class="feature-title">Smart Hints</h3>
+                    <p class="feature-description">
+                        Get helpful hints when you're stuck. Perfect for learning and improving your game.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3 class="feature-title">Fast & Smooth</h3>
+                    <p class="feature-description">
+                        Lightweight design means fast loading and smooth gameplay on any device.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3 class="feature-title">Valid Move Hints</h3>
+                    <p class="feature-description">
+                        See all valid moves for each piece. Great for beginners learning the rules.
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h3 class="feature-title">Undo Moves</h3>
+                    <p class="feature-description">
+                        Made a mistake? No problem! Undo your last move and try a different strategy.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Game Modes Section -->
+    <section class="game-modes">
+        <div class="container">
+            <h2 class="section-title">Choose Your Game Mode</h2>
+            <div class="modes-grid">
+                <div class="mode-card">
+                    <div class="mode-header">
+                        <div class="mode-icon">👥</div>
+                        <h3 class="mode-name">vs Friend</h3>
+                    </div>
+                    <p class="mode-info">Play against a friend on the same device</p>
+                    <ul class="mode-features">
+                        <li>Two human players</li>
+                        <li>Turn-based gameplay</li>
+                        <li>Perfect for learning</li>
+                    </ul>
+                </div>
+                <div class="mode-card featured">
+                    <div class="mode-badge">Popular</div>
+                    <div class="mode-header">
+                        <div class="mode-icon">🤖</div>
+                        <h3 class="mode-name">vs AI</h3>
+                    </div>
+                    <p class="mode-info">Challenge our intelligent chess engine</p>
+                    <ul class="mode-features">
+                        <li>Easy, Medium & Hard levels</li>
+                        <li>Powered by Stockfish</li>
+                        <li>Adaptive difficulty</li>
+                    </ul>
+                </div>
+                <div class="mode-card">
+                    <div class="mode-header">
+                        <div class="mode-icon">🔥</div>
+                        <h3 class="mode-name">AI Hard</h3>
+                    </div>
+                    <p class="mode-info">Test your skills against advanced AI</p>
+                    <ul class="mode-features">
+                        <li>Deep analysis</li>
+                        <li>Challenging gameplay</li>
+                        <li>For experienced players</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="cta-center">
+                <a href="/game" class="btn-primary btn-large">Start Playing Now</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about">
+        <div class="container">
+            <div class="about-content">
+                <div class="about-text">
+                    <h2 class="section-title">About Chess Online</h2>
+                    <p class="about-description">
+                        Chess Online is a free, modern chess platform designed for players of all skill levels.
+                        Whether you're just learning the game or you're an experienced player, our intuitive
+                        interface and powerful features make it easy to enjoy the timeless game of chess.
+                    </p>
+                    <p class="about-description">
+                        Built with modern web technologies, Chess Online offers a smooth, responsive experience
+                        on any device. No downloads, no registration required - just pure chess enjoyment.
+                    </p>
+                    <div class="about-features">
+                        <div class="about-feature">
+                            <svg class="check-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>100% Free to Play</span>
+                        </div>
+                        <div class="about-feature">
+                            <svg class="check-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>No Registration Required</span>
+                        </div>
+                        <div class="about-feature">
+                            <svg class="check-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Works on All Devices</span>
+                        </div>
+                        <div class="about-feature">
+                            <svg class="check-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <path d="M20 6L9 17L4 12" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Open Source Project</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="about-image">
+                    <div class="chess-pieces">
+                        <div class="piece-display">♔</div>
+                        <div class="piece-display">♕</div>
+                        <div class="piece-display">♖</div>
+                        <div class="piece-display">♗</div>
+                        <div class="piece-display">♘</div>
+                        <div class="piece-display">♙</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <span class="logo">♔</span>
+                    <span class="brand-name">Chess Online</span>
+                </div>
+                <div class="footer-text">
+                    <p>© 2025 Chess Online. An educational project for learning chess.</p>
+                    <p>Built with modern web technologies. Open source and free forever.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
 </body>
 </html>
