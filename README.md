@@ -107,6 +107,81 @@ npm run preview
 - Move history tracking
 - Piece capture with score calculation
 
+## Development & Deployment
+
+### Branch Strategy
+
+We follow **Git Flow** branching model:
+
+- **main** - Production-ready code, auto-deploys to production
+- **develop** - Integration branch, auto-deploys to staging
+- **feature/** - New features (branch from develop)
+- **bugfix/** - Bug fixes (branch from develop)
+- **hotfix/** - Critical production fixes (branch from main)
+- **release/** - Release preparation (branch from develop)
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed workflow and guidelines.
+
+### Available Scripts
+
+```bash
+npm run dev        # Start development server
+npm run build      # Production build
+npm run build:dev  # Development build
+npm run preview    # Preview production build
+npm run serve      # Serve production build on port 4173
+npm run clean      # Remove dist folder
+npm run rebuild    # Clean build from scratch
+```
+
+### CI/CD Pipeline
+
+Automated workflows handle:
+- ✅ Build validation on all PRs
+- ✅ Code quality checks
+- ✅ Security audits
+- ✅ Preview deployments for PRs
+- ✅ Auto-deploy to staging (develop branch)
+- ✅ Auto-deploy to production (main branch)
+
+### Deployment Environments
+
+| Environment | Branch | URL | Status |
+|-------------|--------|-----|--------|
+| Production | `main` | TBD | ✅ Auto-deploy |
+| Staging | `develop` | TBD | ✅ Auto-deploy |
+| Preview | `feature/*` | Generated per PR | ✅ Auto-deploy |
+
+### Quick Start for Contributors
+
+```bash
+# Clone and setup
+git clone https://github.com/apexphere/codekid-ai-chess-online.git
+cd codekid-ai-chess-online
+npm install
+
+# Create feature branch
+git checkout develop
+git pull origin develop
+git checkout -b feature/my-awesome-feature
+
+# Make changes, commit, and push
+git add .
+git commit -m "feat: add awesome feature"
+git push origin feature/my-awesome-feature
+
+# Create PR to develop
+gh pr create --base develop --title "feat: add awesome feature"
+```
+
+## Contributing
+
+We welcome contributions! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Branching strategy and workflow
+- Commit message conventions
+- Pull request process
+- Code review guidelines
+
 ## License
 
 This project is open source and available for educational purposes.

@@ -1,0 +1,175 @@
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate PR title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            docs
+            style
+            refactor
+            perf
+            test
+            chore
+            ci
+          requireScope: false
+          subjectPattern: ^[A-Z].+$
+          subjectPatternError: |
+            The subject "{subject}" found in the pull request title "{title}"
+            didn't match the configured pattern. Please ensure that the subject
+            starts with an uppercase character.
+
+      - name: Check branch naming
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          if [[ ! "$BRANCH" =~ ^(feature|bugfix|hotfix|release)/.+ ]]; then
+            echo "❌ Branch name '$BRANCH' doesn't follow convention"
+            echo "Expected: feature/*, bugfix/*, hotfix/*, or release/*"
+            exit 1
+          fi
+          echo "✅ Branch name follows convention"
+
+      - name: Label PR based on branch
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.payload.pull_request.head.ref;
+            let labels = [];
+
+            if (branch.startsWith('feature/')) {
+              labels.push('enhancement');
+            } else if (branch.startsWith('bugfix/')) {
+              labels.push('bug');
+            } else if (branch.startsWith('hotfix/')) {
+              labels.push('hotfix', 'urgent');
+            } else if (branch.startsWith('release/')) {
+              labels.push('release');
+            }
+
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                labels: labels
+              });
+            }
+
+  size-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and check bundle size
+        run: |
+          npm run build
+          echo "### Bundle Size Report 📦" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| File | Size | Gzipped |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|------|---------|" >> $GITHUB_STEP_SUMMARY
+
+          # List all files in dist with sizes
+          find dist -type f -name "*.js" -o -name "*.css" | while read file; do
+            size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file")
+            gzip_size=$(gzip -c "$file" | wc -c)
+            echo "| ${file#dist/} | $size bytes | $gzip_size bytes |" >> $GITHUB_STEP_SUMMARY
+          done
+
+      - name: Comment bundle size
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            let totalSize = 0;
+            let totalGzip = 0;
+
+            // Read dist folder
+            const files = fs.readdirSync('dist', { recursive: true });
+
+            const comment = `### 📦 Bundle Size Report\n\n` +
+              `Build completed successfully! Check the summary for detailed size information.\n\n` +
+              `**Action**: https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: comment
+            });
+
+  preview-deploy:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for preview
+        run: npm run build
+
+      - name: Deploy preview (Vercel)
+        uses: amondnet/vercel-action@v25
+        id: vercel-deploy
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+
+      - name: Comment preview URL
+        uses: actions/github-script@v7
+        if: steps.vercel-deploy.outputs.preview-url
+        with:
+          script: |
+            const previewUrl = '${{ steps.vercel-deploy.outputs.preview-url }}';
+            const comment = `### 🚀 Preview Deployment Ready!\n\n` +
+              `✅ Your changes have been deployed for preview.\n\n` +
+              `**Preview URL**: ${previewUrl}\n\n` +
+              `This preview will be automatically updated on each commit.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: comment
+            });
