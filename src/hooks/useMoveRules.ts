@@ -1,44 +1,59 @@
-import { useState, useCallback } from 'react'
+import { useCallback } from 'react'
+import { PieceType, PIECES } from '../types/chess'
 import {
-  GameMode,
-  BoardState,
-  PieceColor,
-  PieceType,
-  Move,
-  CapturedPieces,
-  Score,
-  Position,
-  INITIAL_BOARD,
-  PromotionData,
-  PIECES,
-  HasMoved,
-} from '../types/chess'
-import { isValidMove, getPieceInfo, getPieceValue, getValidMoves, isValidCastling, wouldBeInCheck, isCheckmate, isStalemate, isInCheck } from '../utils/chessLogic'
+  isValidMove,
+  getPieceInfo,
+  getPieceValue,
+  getValidMoves,
+  isValidCastling,
+  wouldBeInCheck,
+  isCheckmate,
+  isStalemate,
+  isInCheck,
+  executeMove,
+} from '../utils/chess'
+import { useGameBoard } from './useGameBoard'
+import { useComputerAI } from './useComputerAI'
 
-export function useChessGame() {
-  const [boardState, setBoardState] = useState<BoardState>(
-    JSON.parse(JSON.stringify(INITIAL_BOARD))
-  )
-  const [currentPlayer, setCurrentPlayer] = useState<PieceColor>('white')
-  const [capturedPieces, setCapturedPieces] = useState<CapturedPieces>({
-    white: [],
-    black: [],
-  })
-  const [score, setScore] = useState<Score>({ white: 0, black: 0 })
-  const [moveHistory, setMoveHistory] = useState<Move[]>([])
-  const [gameMode, setGameMode] = useState<GameMode>('friend')
-  const [showModal, setShowModal] = useState(true)
-  const [hintsRemaining, setHintsRemaining] = useState(3)
-  const [selectedSquare, setSelectedSquare] = useState<Position | null>(null)
-  const [validMoves, setValidMoves] = useState<Position[]>([])
-  const [draggedPiece, setDraggedPiece] = useState<Position | null>(null)
-  const [promotionData, setPromotionData] = useState<PromotionData | null>(null)
-  const [hasMoved, setHasMoved] = useState<HasMoved>({
-    white: { king: false, rookLeft: false, rookRight: false },
-    black: { king: false, rookLeft: false, rookRight: false },
-  })
-  const [enPassantTarget, setEnPassantTarget] = useState<Position | null>(null)
-  const [gameOver, setGameOver] = useState<{ winner: PieceColor | 'draw'; reason: string } | null>(null)
+export function useMoveRules() {
+  // Use modular hooks
+  const gameState = useGameBoard()
+
+  const {
+    boardState,
+    setBoardState,
+    currentPlayer,
+    setCurrentPlayer,
+    capturedPieces,
+    setCapturedPieces,
+    score,
+    setScore,
+    moveHistory,
+    setMoveHistory,
+    gameMode,
+    setGameMode,
+    hintsRemaining,
+    setHintsRemaining,
+    hasMoved,
+    setHasMoved,
+    enPassantTarget,
+    setEnPassantTarget,
+    gameOver,
+    setGameOver,
+    promotionData,
+    setPromotionData,
+    showModal,
+    setShowModal,
+    selectedSquare,
+    setSelectedSquare,
+    validMoves,
+    setValidMoves,
+    draggedPiece,
+    setDraggedPiece,
+    isComputerThinking,
+    setIsComputerThinking,
+    resetGame,
+  } = gameState
 
   const makeMove = useCallback(
     (fromRow: number, fromCol: number, toRow: number, toCol: number) => {
@@ -63,36 +78,16 @@ export function useChessGame() {
         return false
       }
 
-      // Make the move
-      const newBoard = boardState.map((row) => [...row])
-      let capturedPiece = newBoard[toRow][toCol]
-
-      newBoard[toRow][toCol] = piece
-      newBoard[fromRow][fromCol] = null
-
-      // Handle castling - move the rook too
-      if (isCastling) {
-        const isKingSide = toCol > fromCol
-        const rookFromCol = isKingSide ? 7 : 0
-        const rookToCol = isKingSide ? toCol - 1 : toCol + 1
-        const rook = newBoard[fromRow][rookFromCol]
-        newBoard[fromRow][rookToCol] = rook
-        newBoard[fromRow][rookFromCol] = null
-      }
-
-      // Handle en passant capture
-      if (
-        pieceInfo.type === 'pawn' &&
-        enPassantTarget &&
-        toRow === enPassantTarget.row &&
-        toCol === enPassantTarget.col &&
-        !capturedPiece
-      ) {
-        // Capture the pawn that's one row behind the target square
-        const capturedPawnRow = pieceInfo.color === 'white' ? toRow + 1 : toRow - 1
-        capturedPiece = newBoard[capturedPawnRow][toCol]
-        newBoard[capturedPawnRow][toCol] = null
-      }
+      // Execute the move (handles castling and en passant)
+      const { newBoard, capturedPiece } = executeMove(
+        fromRow,
+        fromCol,
+        toRow,
+        toCol,
+        boardState,
+        enPassantTarget,
+        isCastling
+      )
 
       // Handle captures
       if (capturedPiece) {
@@ -112,7 +107,6 @@ export function useChessGame() {
 
       // Check for pawn promotion
       if (pieceInfo.type === 'pawn' && (toRow === 0 || toRow === 7)) {
-        // Pawn reached the opposite end - trigger promotion
         setBoardState(newBoard)
         setPromotionData({ row: toRow, col: toCol, color: pieceInfo.color })
         return true
@@ -123,7 +117,7 @@ export function useChessGame() {
       const notation = `${colNames[fromCol]}${8 - fromRow}-${colNames[toCol]}${8 - toRow}`
 
       // Add to move history
-      const move: Move = {
+      const move = {
         from: { row: fromRow, col: fromCol },
         to: { row: toRow, col: toCol },
         piece,
@@ -162,7 +156,7 @@ export function useChessGame() {
       setBoardState(newBoard)
       setMoveHistory((prev) => [...prev, move])
 
-      const nextPlayer: PieceColor = currentPlayer === 'white' ? 'black' : 'white'
+      const nextPlayer = currentPlayer === 'white' ? 'black' : 'white'
       setCurrentPlayer(nextPlayer)
 
       // Check for checkmate or stalemate after the move
@@ -176,8 +170,21 @@ export function useChessGame() {
 
       return true
     },
-    [boardState, currentPlayer, hasMoved, enPassantTarget]
+    [boardState, currentPlayer, hasMoved, enPassantTarget, setBoardState, setCapturedPieces, setScore, setPromotionData, setHasMoved, setEnPassantTarget, setMoveHistory, setCurrentPlayer, setGameOver]
   )
+
+  // Computer AI
+  useComputerAI({
+    gameMode,
+    currentPlayer,
+    boardState,
+    enPassantTarget,
+    gameOver,
+    promotionData,
+    isComputerThinking,
+    setIsComputerThinking,
+    makeMove,
+  })
 
   const handlePromotion = useCallback(
     (pieceType: PieceType) => {
@@ -190,13 +197,12 @@ export function useChessGame() {
       setPromotionData(null)
       setCurrentPlayer((prev) => (prev === 'white' ? 'black' : 'white'))
     },
-    [promotionData, boardState]
+    [promotionData, boardState, setBoardState, setPromotionData, setCurrentPlayer]
   )
 
   const handleSquareClick = useCallback(
     (row: number, col: number) => {
       if (!selectedSquare) {
-        // Select piece
         const piece = boardState[row][col]
         if (piece) {
           const pieceInfo = getPieceInfo(piece)
@@ -206,30 +212,24 @@ export function useChessGame() {
           }
         }
       } else {
-        // Try to move piece
         makeMove(selectedSquare.row, selectedSquare.col, row, col)
         setSelectedSquare(null)
         setValidMoves([])
       }
     },
-    [selectedSquare, boardState, currentPlayer, makeMove, enPassantTarget]
+    [selectedSquare, boardState, currentPlayer, makeMove, enPassantTarget, setSelectedSquare, setValidMoves]
   )
 
   const handleUndo = useCallback(() => {
     if (moveHistory.length === 0) return
-
-    // TODO: Implement undo logic
-    const lastMove = moveHistory[moveHistory.length - 1]
-    console.log('Undo move:', lastMove)
-  }, [moveHistory])
+    console.log('Undo requested')
+  }, [moveHistory.length])
 
   const handleHint = useCallback(() => {
     if (hintsRemaining === 0) return
-
-    // TODO: Implement hint logic with Stockfish
     setHintsRemaining((prev) => prev - 1)
     console.log('Hint requested')
-  }, [hintsRemaining])
+  }, [hintsRemaining, setHintsRemaining])
 
   const handleDragStart = useCallback(
     (row: number, col: number) => {
@@ -242,12 +242,12 @@ export function useChessGame() {
         }
       }
     },
-    [boardState, currentPlayer, enPassantTarget]
+    [boardState, currentPlayer, enPassantTarget, setDraggedPiece, setValidMoves]
   )
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault() // Allow drop
-    e.dataTransfer.dropEffect = 'move' // Show move cursor instead of plus
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
   }, [])
 
   const handleDrop = useCallback(
@@ -258,35 +258,19 @@ export function useChessGame() {
         setValidMoves([])
       }
     },
-    [draggedPiece, makeMove]
+    [draggedPiece, makeMove, setDraggedPiece, setValidMoves]
   )
 
   const handleDragEnd = useCallback(() => {
     setDraggedPiece(null)
     setValidMoves([])
-  }, [])
+  }, [setDraggedPiece, setValidMoves])
 
   const handleReset = useCallback(() => {
-    setBoardState(JSON.parse(JSON.stringify(INITIAL_BOARD)))
-    setCurrentPlayer('white')
-    setCapturedPieces({ white: [], black: [] })
-    setScore({ white: 0, black: 0 })
-    setMoveHistory([])
-    setHintsRemaining(3)
-    setSelectedSquare(null)
-    setDraggedPiece(null)
-    setValidMoves([])
-    setPromotionData(null)
-    setHasMoved({
-      white: { king: false, rookLeft: false, rookRight: false },
-      black: { king: false, rookLeft: false, rookRight: false },
-    })
-    setEnPassantTarget(null)
-    setGameOver(null)
+    resetGame()
     setShowModal(true)
-  }, [])
+  }, [resetGame, setShowModal])
 
-  // Check if current player is in check
   const inCheck = isInCheck(currentPlayer, boardState)
 
   return {
@@ -304,6 +288,7 @@ export function useChessGame() {
     promotionData,
     gameOver,
     inCheck,
+    isComputerThinking,
     handleSquareClick,
     handleDragStart,
     handleDragOver,
