@@ -1,1 +1,0 @@
-1. Game win detection is missing. Add game victory for checkmate and stalemate.

@@ -7,7 +7,7 @@ import ChessBoard from '../components/ChessBoard'
 import CapturedPieces from '../components/CapturedPieces'
 import MoveHistory from '../components/MoveHistory'
 import GameControls from '../components/GameControls'
-import { useChessGame } from '../hooks/useChessGame'
+import { useMoveRules } from '../hooks/useMoveRules'
 
 function Game() {
   useEffect(() => {
@@ -30,6 +30,7 @@ function Game() {
     promotionData,
     gameOver,
     inCheck,
+    isComputerThinking,
     handleSquareClick,
     handleDragStart,
     handleDragOver,
@@ -41,7 +42,7 @@ function Game() {
     handleReset,
     setGameMode,
     setShowModal,
-  } = useChessGame()
+  } = useMoveRules()
 
   return (
     <>
@@ -75,8 +76,14 @@ function Game() {
         <div className="game-layout">
           {/* Turn Indicator */}
           <div className={`turn-indicator ${currentPlayer}-turn`} id="turnIndicator">
-            {inCheck && <span style={{ color: 'red', fontWeight: 'bold' }}>CHECK! </span>}
-            {currentPlayer === 'white' ? "White's Turn!" : "Black's Turn!"}
+            {isComputerThinking ? (
+              "Computer is thinking..."
+            ) : (
+              <>
+                {inCheck && <span style={{ color: 'red', fontWeight: 'bold' }}>CHECK! </span>}
+                {currentPlayer === 'white' ? "White's Turn!" : "Black's Turn!"}
+              </>
+            )}
           </div>
 
           {/* Left Side: Captured Pieces */}
