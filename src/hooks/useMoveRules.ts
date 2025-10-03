@@ -56,7 +56,7 @@ export function useMoveRules() {
   } = gameState
 
   const makeMove = useCallback(
-    (fromRow: number, fromCol: number, toRow: number, toCol: number) => {
+    (fromRow: number, fromCol: number, toRow: number, toCol: number, promotionChoice?: PieceType) => {
       const piece = boardState[fromRow][fromCol]
       if (!piece) return false
 
@@ -105,11 +105,17 @@ export function useMoveRules() {
         }
       }
 
-      // Check for pawn promotion
+      let promotionSelected: PieceType | null = null
+
       if (pieceInfo.type === 'pawn' && (toRow === 0 || toRow === 7)) {
-        setBoardState(newBoard)
-        setPromotionData({ row: toRow, col: toCol, color: pieceInfo.color })
-        return true
+        if (promotionChoice) {
+          newBoard[toRow][toCol] = PIECES[pieceInfo.color][promotionChoice]
+          promotionSelected = promotionChoice
+        } else {
+          setBoardState(newBoard)
+          setPromotionData({ row: toRow, col: toCol, color: pieceInfo.color })
+          return true
+        }
       }
 
       // Create move notation
@@ -124,6 +130,7 @@ export function useMoveRules() {
         captured: capturedPiece || undefined,
         notation,
         timestamp: Date.now(),
+        promotion: promotionSelected ?? undefined,
       }
 
       // Update hasMoved state
@@ -181,6 +188,8 @@ export function useMoveRules() {
     enPassantTarget,
     gameOver,
     promotionData,
+    hasMoved,
+    moveHistory,
     isComputerThinking,
     setIsComputerThinking,
     makeMove,

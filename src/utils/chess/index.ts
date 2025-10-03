@@ -2,3 +2,4 @@
 
 export * from './gameBoard'
 export * from './moveRules'
+export * from './fen'
