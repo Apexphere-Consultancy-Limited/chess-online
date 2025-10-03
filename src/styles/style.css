@@ -801,11 +801,35 @@ body.game-page {
     transform: translateX(3px);
 }
 
+.move-entry {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    margin-bottom: 5px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.move-entry:hover {
+    background: #e9ecef;
+    transform: translateX(3px);
+}
+
 .move-number {
     font-weight: bold;
     color: #7f8c8d;
     min-width: 30px;
     font-size: 14px;
+}
+
+.move-column {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 120px;
 }
 
 .move-item {

@@ -22,6 +22,7 @@ export interface Move {
   captured?: PieceSymbol
   notation: string
   timestamp: number
+  promotion?: PieceType
 }
 
 export interface CapturedPieces {
@@ -54,7 +55,7 @@ export interface GameState {
   score: Score
   moveHistory: Move[]
   gameMode: GameMode
-  gameOver: boolean
+  gameOver: { winner: PieceColor | 'draw'; reason: string } | null | false
   hasMoved: HasMoved
   enPassantTarget: Position | null
   hintsRemaining: number
