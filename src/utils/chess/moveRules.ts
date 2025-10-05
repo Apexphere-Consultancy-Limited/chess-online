@@ -146,16 +146,8 @@ export function isValidKingMove(
   const colDiff = Math.abs(toCol - fromCol)
 
   // Normal king move (1 square in any direction)
-  if (rowDiff <= 1 && colDiff <= 1) {
-    return true
-  }
-
-  // Castling (2 squares horizontally) - further validation in isValidCastling
-  if (rowDiff === 0 && colDiff === 2) {
-    return true
-  }
-
-  return false
+  // Note: Castling (2 squares) is validated separately in isValidCastling
+  return rowDiff <= 1 && colDiff <= 1
 }
 
 // ============================================================================
