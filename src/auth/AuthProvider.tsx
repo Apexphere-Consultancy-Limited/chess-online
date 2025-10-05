@@ -9,7 +9,7 @@ type AuthContextType = {
   signInWithGoogle: () => Promise<void>
   signInWithEmail: (email: string) => Promise<void>
   signInWithPassword: (email: string, password: string) => Promise<void>
-  signUpWithPassword: (email: string, password: string) => Promise<void>
+  signUpWithPassword: (email: string, password: string, metadata?: { name?: string; skillLevel?: string }) => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -62,10 +62,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       if (error) throw error
     },
-    async signUpWithPassword(email: string, password: string) {
+    async signUpWithPassword(email: string, password: string, metadata?: { name?: string; skillLevel?: string }) {
       const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            full_name: metadata?.name,
+            skill_level: metadata?.skillLevel,
+          },
+        },
       })
       if (error) throw error
     },
