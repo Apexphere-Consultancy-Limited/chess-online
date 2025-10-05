@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error
     },
     async signUpWithPassword(email: string, password: string, metadata?: { name?: string; skillLevel?: string }) {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -74,6 +74,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       })
       if (error) throw error
+
+      // Update profile with username and skill_level
+      // Note: Database trigger creates profile with default values on signup
+      if (data.user) {
+        const profileData = {
+          username: metadata?.name || email.split('@')[0],
+          skill_level: metadata?.skillLevel || 'Beginner',
+        }
+        console.log('Updating profile with data:', profileData)
+
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update(profileData)
+          .eq('id', data.user.id)
+
+        if (profileError) {
+          console.error('Error updating profile:', profileError)
+          // Don't throw error here, as auth signup was successful
+        } else {
+          console.log('Profile updated successfully')
+        }
+      }
     },
     async signOut() {
       await supabase.auth.signOut()
