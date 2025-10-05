@@ -31,6 +31,7 @@ export default function Login() {
     setStatus(null)
     try {
       if (isSignUp) {
+        console.log('Signing up with skill level:', skillLevel)
         await signUpWithPassword(email, password, { name, skillLevel })
         setStatus('Account created! You can now sign in.')
       } else {

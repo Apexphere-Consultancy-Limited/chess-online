@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import GameModeModal from '../components/GameModeModal'
 import PromotionModal from '../components/PromotionModal'
 import GameOverModal from '../components/GameOverModal'
@@ -10,10 +10,19 @@ import { useMoveRules } from '../hooks/useMoveRules'
 import NavBar from '../components/NavBar'
 
 function Game() {
+  const [showNavbar, setShowNavbar] = useState(true)
+
   useEffect(() => {
     document.body.classList.add('game-page')
+
+    // Auto-hide navbar after 3 seconds
+    const timer = setTimeout(() => {
+      setShowNavbar(false)
+    }, 3000)
+
     return () => {
       document.body.classList.remove('game-page')
+      clearTimeout(timer)
     }
   }, [])
   const {
@@ -46,8 +55,8 @@ function Game() {
 
   return (
     <>
-      {/* Hover-reveal top navigation (hidden by default on game page) */}
-      <div className="game-top-nav">
+      {/* Auto-hide top navigation (shows for 3 seconds on page load) */}
+      <div className={`game-top-nav ${showNavbar ? 'show' : ''}`}>
         <NavBar />
       </div>
 

@@ -30,7 +30,7 @@ body.game-page {
     font-family: Arial, sans-serif;
 }
 
-/* Game page: persistent top navbar */
+/* Game page: auto-hide top navbar */
 .game-page .game-top-nav {
     position: fixed;
     top: 0;
@@ -41,21 +41,17 @@ body.game-page {
 }
 
 .game-page .game-top-nav .navbar {
-    transform: none;
-    opacity: 1;
-    transition: transform 200ms ease, opacity 200ms ease;
+    transform: translateY(calc(-100% + 14px));
+    opacity: 0.4;
+    transition: transform 500ms ease, opacity 500ms ease;
     pointer-events: auto; /* allow interaction */
 }
 
-@media (hover: hover) and (pointer: fine) {
-    .game-page .game-top-nav .navbar {
-        transform: translateY(calc(-100% + 14px));
-        opacity: 0.4;
-    }
-    .game-page .game-top-nav .navbar:hover {
-        transform: translateY(0);
-        opacity: 1;
-    }
+/* Show navbar when .show class is present or on hover */
+.game-page .game-top-nav.show .navbar,
+.game-page .game-top-nav:hover .navbar {
+    transform: translateY(0);
+    opacity: 1;
 }
 
 .back-home-link {

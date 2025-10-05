@@ -1,12 +1,14 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../auth/AuthProvider'
+import ConfirmationModal from './ConfirmationModal'
 import '../styles/navbar.css'
 
 function NavBar() {
   const { user, signOut } = useAuth()
   const [open, setOpen] = useState(false)
   const [activeHash, setActiveHash] = useState('')
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -70,8 +72,24 @@ function NavBar() {
   }, [location.hash])
 
   return (
-    <nav className="navbar" role="navigation" aria-label="Main">
-      <div className="nav-container">
+    <>
+      {showLogoutModal && (
+        <ConfirmationModal
+          title="Sign Out"
+          message="Are you sure you want to sign out?"
+          confirmText="Sign Out"
+          cancelText="Cancel"
+          onConfirm={() => {
+            signOut()
+            setShowLogoutModal(false)
+            closeMenu()
+          }}
+          onCancel={() => setShowLogoutModal(false)}
+        />
+      )}
+
+      <nav className="navbar" role="navigation" aria-label="Main">
+        <div className="nav-container">
         <div className="nav-left">
           <Link to="/" className="nav-brand" onClick={closeMenu}>
             <span>Chess Online</span>
@@ -105,13 +123,15 @@ function NavBar() {
         <div className="nav-cta nav-cta-desktop">
           {user ? (
             <div className="user-profile">
-              <img
-                src={user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.user_metadata?.full_name || user.email || 'User')}&background=81b64c&color=fff`}
-                alt="User avatar"
-                className="user-avatar"
-              />
-              <span className="user-name">{user.user_metadata?.full_name || user.email}</span>
-              <button onClick={signOut} className="nav-btn nav-btn-outline">
+              <Link to="/profile" className="user-profile-link">
+                <img
+                  src={user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.user_metadata?.full_name || user.email || 'User')}&background=81b64c&color=fff`}
+                  alt="User avatar"
+                  className="user-avatar"
+                />
+                <span className="user-name">{user.user_metadata?.full_name || user.email}</span>
+              </Link>
+              <button onClick={() => setShowLogoutModal(true)} className="nav-btn nav-btn-outline">
                 Log Out
               </button>
             </div>
@@ -144,13 +164,15 @@ function NavBar() {
           <div className="nav-cta">
             {user ? (
               <div className="user-profile-mobile">
-                <img
-                  src={user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.user_metadata?.full_name || user.email || 'User')}&background=81b64c&color=fff`}
-                  alt="User avatar"
-                  className="user-avatar"
-                />
-                <span className="user-name">{user.user_metadata?.full_name || user.email}</span>
-                <button onClick={() => { signOut(); closeMenu(); }} className="nav-btn nav-btn-outline">
+                <Link to="/profile" className="user-profile-link" onClick={closeMenu}>
+                  <img
+                    src={user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.user_metadata?.full_name || user.email || 'User')}&background=81b64c&color=fff`}
+                    alt="User avatar"
+                    className="user-avatar"
+                  />
+                  <span className="user-name">{user.user_metadata?.full_name || user.email}</span>
+                </Link>
+                <button onClick={() => setShowLogoutModal(true)} className="nav-btn nav-btn-outline">
                   Log Out
                 </button>
               </div>
@@ -168,6 +190,7 @@ function NavBar() {
         </div>
       </div>
     </nav>
+    </>
   )
 }
 
