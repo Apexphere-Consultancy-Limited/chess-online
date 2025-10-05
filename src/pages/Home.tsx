@@ -1,121 +1,127 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
+import NavBar from '../components/NavBar'
+import '../styles/home.css'
 
 function Home() {
-  return (
-    <>
-      {/* Navigation */}
-      <nav className="navbar">
-        <div className="nav-container">
-          <div className="nav-brand">
-            <span className="logo">♔</span>
-            <span className="brand-name">Chess Online</span>
-          </div>
-          <div className="nav-links">
-            <a href="#features">Features</a>
-            <a href="#about">About</a>
-            <Link to="/game" className="btn-play-nav">Play Now</Link>
-          </div>
-        </div>
-      </nav>
+  const location = useLocation()
 
-      {/* Hero Section */}
-      <section className="hero">
+  useEffect(() => {
+    // Handle hash navigation
+    if (location.hash === '#features') {
+      const featuresSection = document.getElementById('features')
+      if (featuresSection) {
+        setTimeout(() => {
+          featuresSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }, 100)
+      }
+    } else if (location.hash === '#game-modes') {
+      const gameModesSection = document.querySelector('.game-modes-section')
+      if (gameModesSection) {
+        setTimeout(() => {
+          gameModesSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }, 100)
+      }
+    } else {
+      // Scroll to top when no hash
+      const homePageElement = document.querySelector('.home-page')
+      if (homePageElement) {
+        homePageElement.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    }
+  }, [location.hash])
+
+  return (
+    <div className="home-page">
+      <NavBar />
+
+      {/* Section 1: Hero Welcome */}
+      <section className="hero-section">
+        <div className="hero-background">
+          <div className="hero-orb hero-orb-1"></div>
+          <div className="hero-orb hero-orb-2"></div>
+          <div className="hero-orb hero-orb-3"></div>
+        </div>
+
         <div className="hero-content">
           <h1 className="hero-title">
-            Play Chess <span className="highlight">Online</span>
+            Play Chess
+            <br />
+            <span className="hero-highlight">Online</span>
           </h1>
           <p className="hero-subtitle">
-            Challenge friends or test your skills against our AI. Free, fast, and fun chess for everyone.
+            Challenge friends or test your skills against our AI.
+          </p>
+          <p className="hero-tagline">
+            Free, fast, and fun chess for everyone.
           </p>
           <div className="hero-buttons">
-            <Link to="/game" className="btn-primary">
-              <span>Play Online</span>
-              <svg className="btn-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <Link to="/game" className="btn-hero btn-hero-primary">
+              <span>Start Playing Now</span>
+              <svg width="36" height="36" viewBox="0 0 20 20" fill="none">
+                <path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </Link>
-            <a href="#features" className="btn-secondary">Learn More</a>
+            <a href="#features" className="btn-hero btn-hero-secondary">
+              <span>Learn More</span>
+              <svg className="chevron-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </a>
           </div>
-          <div className="hero-stats">
-            <div className="stat-item">
-              <div className="stat-number">3</div>
-              <div className="stat-label">Game Modes</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-number">100%</div>
-              <div className="stat-label">Free to Play</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-number">∞</div>
-              <div className="stat-label">Unlimited Games</div>
-            </div>
-          </div>
-        </div>
-        <div className="hero-visual">
-          <div className="floating-board">
-            <div className="mini-board">
-              <div className="mini-square light">♔</div>
-              <div className="mini-square dark"></div>
-              <div className="mini-square light"></div>
-              <div className="mini-square dark">♟</div>
-              <div className="mini-square dark"></div>
-              <div className="mini-square light">♜</div>
-              <div className="mini-square dark"></div>
-              <div className="mini-square light"></div>
-              <div className="mini-square light"></div>
-              <div className="mini-square dark">♙</div>
-              <div className="mini-square light"></div>
-              <div className="mini-square dark"></div>
-              <div className="mini-square dark">♞</div>
-              <div className="mini-square light"></div>
-              <div className="mini-square dark"></div>
-              <div className="mini-square light">♕</div>
-            </div>
+
+          <div className="scroll-indicator">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+            </svg>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="features">
-        <div className="container">
-          <h2 className="section-title">Why Choose Chess Online?</h2>
+      {/* Section 2: Features */}
+      <section id="features" className="features-section">
+        <div className="section-container">
+          <div className="section-header">
+            <h2 className="section-title">Why Choose Chess Online?</h2>
+            <p className="section-subtitle">Everything you need for an amazing chess experience, all in one place</p>
+          </div>
           <div className="features-grid">
-            <div className="feature-card">
+            <div className="feature-card feature-blue">
               <div className="feature-icon">👥</div>
               <h3 className="feature-title">Play with Friends</h3>
               <p className="feature-description">
                 Challenge a friend on the same device. Perfect for learning and casual games.
               </p>
             </div>
-            <div className="feature-card">
+            <div className="feature-card feature-purple">
               <div className="feature-icon">🤖</div>
               <h3 className="feature-title">AI Opponents</h3>
               <p className="feature-description">
                 Play against our AI with multiple difficulty levels, from beginner to advanced.
               </p>
             </div>
-            <div className="feature-card">
+            <div className="feature-card feature-yellow">
               <div className="feature-icon">💡</div>
               <h3 className="feature-title">Smart Hints</h3>
               <p className="feature-description">
                 Get helpful hints when you're stuck. Perfect for learning and improving your game.
               </p>
             </div>
-            <div className="feature-card">
+            <div className="feature-card feature-green">
               <div className="feature-icon">⚡</div>
               <h3 className="feature-title">Fast & Smooth</h3>
               <p className="feature-description">
                 Lightweight design means fast loading and smooth gameplay on any device.
               </p>
             </div>
-            <div className="feature-card">
+            <div className="feature-card feature-red">
               <div className="feature-icon">🎯</div>
               <h3 className="feature-title">Valid Move Hints</h3>
               <p className="feature-description">
                 See all valid moves for each piece. Great for beginners learning the rules.
               </p>
             </div>
-            <div className="feature-card">
+            <div className="feature-card feature-indigo">
               <div className="feature-icon">🔄</div>
               <h3 className="feature-title">Undo Moves</h3>
               <p className="feature-description">
@@ -126,127 +132,115 @@ function Home() {
         </div>
       </section>
 
-      {/* Game Modes Section */}
-      <section className="game-modes">
-        <div className="container">
-          <h2 className="section-title">Choose Your Game Mode</h2>
+      {/* Section 3: Game Modes */}
+      <section className="game-modes-section">
+        <div className="game-modes-background">
+          <div className="modes-orb modes-orb-1"></div>
+          <div className="modes-orb modes-orb-2"></div>
+        </div>
+
+        <div className="section-container">
+          <div className="section-header">
+            <h2 className="section-title section-title-light">Choose Your Game Mode</h2>
+            <p className="section-subtitle section-subtitle-light">Pick the perfect challenge for your skill level</p>
+          </div>
           <div className="modes-grid">
             <div className="mode-card">
-              <div className="mode-header">
-                <div className="mode-icon">👥</div>
-                <h3 className="mode-name">vs Friend</h3>
-              </div>
-              <p className="mode-info">Play against a friend on the same device</p>
+              <div className="mode-icon">👥</div>
+              <h3 className="mode-title">vs Friend</h3>
+              <p className="mode-description">
+                Play against a friend on the same device
+              </p>
               <ul className="mode-features">
-                <li>Two human players</li>
-                <li>Turn-based gameplay</li>
-                <li>Perfect for learning</li>
+                <li>
+                  <svg className="checkmark" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                  </svg>
+                  <span>Two human players</span>
+                </li>
+                <li>
+                  <svg className="checkmark" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                  </svg>
+                  <span>Turn-based gameplay</span>
+                </li>
+                <li>
+                  <svg className="checkmark" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                  </svg>
+                  <span>Perfect for learning</span>
+                </li>
               </ul>
             </div>
-            <div className="mode-card featured">
-              <div className="mode-badge">Popular</div>
-              <div className="mode-header">
-                <div className="mode-icon">🤖</div>
-                <h3 className="mode-name">vs AI</h3>
-              </div>
-              <p className="mode-info">Challenge our intelligent chess engine</p>
+
+            <div className="mode-card mode-featured">
+              <div className="mode-badge">Most Popular</div>
+              <div className="mode-icon">🤖</div>
+              <h3 className="mode-title">vs AI</h3>
+              <p className="mode-description">
+                Challenge our intelligent chess engine
+              </p>
               <ul className="mode-features">
-                <li>Easy, Medium & Hard levels</li>
-                <li>Powered by Stockfish</li>
-                <li>Adaptive difficulty</li>
+                <li>
+                  <svg className="checkmark checkmark-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                  </svg>
+                  <span>Easy, Medium & Hard levels</span>
+                </li>
+                <li>
+                  <svg className="checkmark checkmark-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                  </svg>
+                  <span>Powered by Stockfish</span>
+                </li>
+                <li>
+                  <svg className="checkmark checkmark-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                  </svg>
+                  <span>Adaptive difficulty</span>
+                </li>
               </ul>
             </div>
+
             <div className="mode-card">
-              <div className="mode-header">
-                <div className="mode-icon">🔥</div>
-                <h3 className="mode-name">AI Hard</h3>
-              </div>
-              <p className="mode-info">Test your skills against advanced AI</p>
+              <div className="mode-icon">🔥</div>
+              <h3 className="mode-title">AI Hard</h3>
+              <p className="mode-description">
+                Test your skills against advanced AI
+              </p>
               <ul className="mode-features">
-                <li>Deep analysis</li>
-                <li>Challenging gameplay</li>
-                <li>For experienced players</li>
+                <li>
+                  <svg className="checkmark" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                  </svg>
+                  <span>Deep analysis</span>
+                </li>
+                <li>
+                  <svg className="checkmark" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                  </svg>
+                  <span>Challenging gameplay</span>
+                </li>
+                <li>
+                  <svg className="checkmark" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                  </svg>
+                  <span>For experienced players</span>
+                </li>
               </ul>
             </div>
           </div>
           <div className="cta-center">
-            <Link to="/game" className="btn-primary btn-large">Start Playing Now</Link>
+            <Link to="/game" className="btn-large btn-hero-light">
+              <span>Start Playing Now</span>
+              <svg width="28" height="28" viewBox="0 0 20 20" fill="none">
+                <path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </Link>
           </div>
         </div>
       </section>
-
-      {/* About Section */}
-      <section id="about" className="about">
-        <div className="container">
-          <div className="about-content">
-            <div className="about-text">
-              <h2 className="section-title">About Chess Online</h2>
-              <p className="about-description">
-                Chess Online is a free, modern chess platform designed for players of all skill levels.
-                Whether you're just learning the game or you're an experienced player, our intuitive
-                interface and powerful features make it easy to enjoy the timeless game of chess.
-              </p>
-              <p className="about-description">
-                Built with modern web technologies, Chess Online offers a smooth, responsive experience
-                on any device. No downloads, no registration required - just pure chess enjoyment.
-              </p>
-              <div className="about-features">
-                <div className="about-feature">
-                  <svg className="check-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M20 6L9 17L4 12" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  <span>100% Free to Play</span>
-                </div>
-                <div className="about-feature">
-                  <svg className="check-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M20 6L9 17L4 12" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  <span>No Registration Required</span>
-                </div>
-                <div className="about-feature">
-                  <svg className="check-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M20 6L9 17L4 12" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  <span>Works on All Devices</span>
-                </div>
-                <div className="about-feature">
-                  <svg className="check-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                    <path d="M20 6L9 17L4 12" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  <span>Open Source Project</span>
-                </div>
-              </div>
-            </div>
-            <div className="about-image">
-              <div className="chess-pieces">
-                <div className="piece-display">♔</div>
-                <div className="piece-display">♕</div>
-                <div className="piece-display">♖</div>
-                <div className="piece-display">♗</div>
-                <div className="piece-display">♘</div>
-                <div className="piece-display">♙</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="footer">
-        <div className="container">
-          <div className="footer-content">
-            <div className="footer-brand">
-              <span className="logo">♔</span>
-              <span className="brand-name">Chess Online</span>
-            </div>
-            <div className="footer-text">
-              <p>© 2025 Chess Online. An educational project for learning chess.</p>
-              <p>Built with modern web technologies. Open source and free forever.</p>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </>
+    </div>
   )
 }
 
