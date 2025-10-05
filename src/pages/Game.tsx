@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 import { useEffect } from 'react'
 import GameModeModal from '../components/GameModeModal'
 import PromotionModal from '../components/PromotionModal'
@@ -8,6 +7,7 @@ import CapturedPieces from '../components/CapturedPieces'
 import MoveHistory from '../components/MoveHistory'
 import GameControls from '../components/GameControls'
 import { useMoveRules } from '../hooks/useMoveRules'
+import NavBar from '../components/NavBar'
 
 function Game() {
   useEffect(() => {
@@ -46,7 +46,10 @@ function Game() {
 
   return (
     <>
-      <Link to="/" className="back-home-link">← Back to Home</Link>
+      {/* Hover-reveal top navigation (hidden by default on game page) */}
+      <div className="game-top-nav">
+        <NavBar />
+      </div>
 
       {showModal && (
         <GameModeModal
