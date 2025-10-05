@@ -7,6 +7,7 @@ export default function Login() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [skillLevel, setSkillLevel] = useState('Beginner')
   const [isSignUp, setIsSignUp] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   const [search] = useSearchParams()
@@ -30,7 +31,7 @@ export default function Login() {
     setStatus(null)
     try {
       if (isSignUp) {
-        await signUpWithPassword(email, password)
+        await signUpWithPassword(email, password, { name, skillLevel })
         setStatus('Account created! You can now sign in.')
       } else {
         await signInWithPassword(email, password)
@@ -47,7 +48,7 @@ export default function Login() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '2rem',
+      padding: '2rem 2rem',
     }}>
       <div style={{
         width: '100%',
@@ -56,6 +57,7 @@ export default function Login() {
         borderRadius: '1rem',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
         padding: '2.5rem',
+        margin: 'auto',
       }}>
         <div style={{ marginBottom: '1.5rem' }}>
           <Link to="/" style={{
@@ -141,6 +143,57 @@ export default function Login() {
             onFocus={(e) => e.target.style.borderColor = '#81b64c'}
             onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
           />
+          {isSignUp && (
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                color: '#1a1a1a',
+              }}>
+                Chess Skill Level
+              </label>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: '0.5rem',
+              }}>
+                {['New to Chess', 'Beginner', 'Intermediate', 'Advanced'].map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setSkillLevel(level)}
+                    style={{
+                      padding: '0.75rem 1rem',
+                      borderRadius: '0.5rem',
+                      border: `2px solid ${skillLevel === level ? '#81b64c' : '#e5e7eb'}`,
+                      background: skillLevel === level ? '#f0f9e8' : 'white',
+                      color: skillLevel === level ? '#81b64c' : '#6b7280',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: skillLevel === level ? 600 : 500,
+                      transition: 'all 0.3s ease',
+                    }}
+                    onMouseOver={(e) => {
+                      if (skillLevel !== level) {
+                        e.currentTarget.style.borderColor = '#81b64c'
+                        e.currentTarget.style.background = '#f9fafb'
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      if (skillLevel !== level) {
+                        e.currentTarget.style.borderColor = '#e5e7eb'
+                        e.currentTarget.style.background = 'white'
+                      }
+                    }}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <button
             type="submit"
             style={{

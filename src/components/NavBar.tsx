@@ -103,12 +103,28 @@ function NavBar() {
         </button>
 
         <div className="nav-cta nav-cta-desktop">
-          <Link to="/login" className="nav-btn nav-btn-outline" onClick={closeMenu}>
-            Log In
-          </Link>
-          <Link to="/login?signup=true" className="nav-btn nav-btn-primary" onClick={closeMenu}>
-            Sign Up
-          </Link>
+          {user ? (
+            <div className="user-profile">
+              <img
+                src={user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.user_metadata?.full_name || user.email || 'User')}&background=81b64c&color=fff`}
+                alt="User avatar"
+                className="user-avatar"
+              />
+              <span className="user-name">{user.user_metadata?.full_name || user.email}</span>
+              <button onClick={signOut} className="nav-btn nav-btn-outline">
+                Log Out
+              </button>
+            </div>
+          ) : (
+            <>
+              <Link to="/login" className="nav-btn nav-btn-outline" onClick={closeMenu}>
+                Log In
+              </Link>
+              <Link to="/login?signup=true" className="nav-btn nav-btn-primary" onClick={closeMenu}>
+                Sign Up
+              </Link>
+            </>
+          )}
         </div>
 
         <div className={`nav-links ${open ? 'open' : ''}`}>
@@ -126,12 +142,28 @@ function NavBar() {
             </li>
           </ul>
           <div className="nav-cta">
-            <Link to="/login" className="nav-btn nav-btn-outline" onClick={closeMenu}>
-              Log In
-            </Link>
-            <Link to="/login?signup=true" className="nav-btn nav-btn-primary" onClick={closeMenu}>
-              Sign Up
-            </Link>
+            {user ? (
+              <div className="user-profile-mobile">
+                <img
+                  src={user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.user_metadata?.full_name || user.email || 'User')}&background=81b64c&color=fff`}
+                  alt="User avatar"
+                  className="user-avatar"
+                />
+                <span className="user-name">{user.user_metadata?.full_name || user.email}</span>
+                <button onClick={() => { signOut(); closeMenu(); }} className="nav-btn nav-btn-outline">
+                  Log Out
+                </button>
+              </div>
+            ) : (
+              <>
+                <Link to="/login" className="nav-btn nav-btn-outline" onClick={closeMenu}>
+                  Log In
+                </Link>
+                <Link to="/login?signup=true" className="nav-btn nav-btn-primary" onClick={closeMenu}>
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
