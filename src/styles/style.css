@@ -163,12 +163,26 @@ body.game-page {
 }
 
 .piece {
-    font-size: 60px;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     cursor: grab;
     user-select: none;
     position: absolute;
+    top: 0;
+    left: 0;
     transition: transform 0.1s;
     z-index: 10;
+}
+
+.piece-image {
+    width: 80%;
+    height: 80%;
+    object-fit: contain;
+    pointer-events: none;
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.25));
 }
 
 .piece:active {
@@ -499,6 +513,11 @@ body.game-page {
     background: rgba(52, 73, 94, 0.1);
     border-radius: 5px;
     animation: captureAppear 0.5s ease-out;
+}
+
+.captured-piece .piece-image {
+    width: 36px;
+    height: 36px;
 }
 
 @keyframes captureAppear {

@@ -1,4 +1,5 @@
 import { PieceSymbol, PieceColor } from '../types/chess'
+import { PieceIcon } from './PieceIcon'
 
 interface CapturedPiecesProps {
   color: PieceColor
@@ -15,7 +16,9 @@ function CapturedPieces({ color, capturedPieces, score }: CapturedPiecesProps) {
       <h3>{oppositeColor}'s Captured Pieces</h3>
       <div className="captured-list">
         {capturedPieces.map((piece, index) => (
-          <span key={index} className="captured-piece">{piece}</span>
+          <span key={index} className="captured-piece">
+            <PieceIcon piece={piece} />
+          </span>
         ))}
       </div>
       <div className="score-display">
