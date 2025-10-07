@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Navigate, useParams } from 'react-router-dom'
 import GameModeModal from '../components/GameModeModal'
 import PromotionModal from '../components/PromotionModal'
 import GameOverModal from '../components/GameOverModal'
@@ -8,8 +9,31 @@ import MoveHistory from '../components/MoveHistory'
 import GameControls from '../components/GameControls'
 import { useMoveRules } from '../hooks/useMoveRules'
 import NavBar from '../components/NavBar'
+import OnlineGame from '../components/OnlineGame'
+import { useAuth } from '../auth/AuthProvider'
 
 function Game() {
+  const { gameId } = useParams<{ gameId: string }>()
+  const { user, loading } = useAuth()
+
+  if (gameId) {
+    if (loading) {
+      return (
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          Checking authentication...
+        </div>
+      )
+    }
+
+    if (!user) {
+      const redirectTo = encodeURIComponent(`/game/${gameId}`)
+      return <Navigate to={`/login?redirect=${redirectTo}`} replace />
+    }
+
+    return <OnlineGame />
+  }
+
+  // Otherwise, render local game (vs Friend or vs AI)
   const [showNavbar, setShowNavbar] = useState(true)
 
   useEffect(() => {
