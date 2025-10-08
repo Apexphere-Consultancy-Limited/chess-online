@@ -9,6 +9,9 @@ interface SquareProps {
   isSelected: boolean
   isValidMove: boolean
   isDragging: boolean
+  isLastMoveFrom: boolean
+  isLastMoveTo: boolean
+  hintRank: 'gold' | null
   onClick: (row: number, col: number) => void
   onDragStart: (row: number, col: number) => void
   onDragOver: (e: React.DragEvent) => void
@@ -24,13 +27,16 @@ function Square({
   isSelected,
   isValidMove,
   isDragging,
+  isLastMoveFrom,
+  isLastMoveTo,
+  hintRank,
   onClick,
   onDragStart,
   onDragOver,
   onDrop,
   onDragEnd
 }: SquareProps) {
-  const squareClass = `square ${isLight ? 'light' : 'dark'} ${isSelected ? 'selected' : ''} ${isValidMove ? 'valid-move' : ''}`
+  const squareClass = `square ${isLight ? 'light' : 'dark'} ${isSelected ? 'selected' : ''} ${isValidMove ? 'valid-move' : ''} ${isLastMoveFrom || isLastMoveTo ? 'last-move' : ''} ${hintRank ? `hint-${hintRank}` : ''}`
 
   const handleDragStart = (e: React.DragEvent) => {
     // Set the drag effect to 'move' to remove the plus icon

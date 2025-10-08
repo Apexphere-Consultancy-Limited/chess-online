@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { PieceType, PIECES } from '../types/chess'
+import { PieceType, PIECES, INITIAL_BOARD } from '../types/chess'
 import {
   isValidMove,
   getPieceInfo,
@@ -11,6 +11,7 @@ import {
   isStalemate,
   isInCheck,
   executeMove,
+  getBestMoves,
 } from '../utils/chess'
 import { useGameBoard } from './useGameBoard'
 import { useComputerAI } from './useComputerAI'
@@ -52,6 +53,16 @@ export function useMoveRules() {
     setDraggedPiece,
     isComputerThinking,
     setIsComputerThinking,
+    lastMove,
+    setLastMove,
+    whiteTimeLeft,
+    setWhiteTimeLeft,
+    blackTimeLeft,
+    setBlackTimeLeft,
+    timerActive,
+    setTimerActive,
+    hintSquares,
+    setHintSquares,
     resetGame,
   } = gameState
 
@@ -162,6 +173,15 @@ export function useMoveRules() {
 
       setBoardState(newBoard)
       setMoveHistory((prev) => [...prev, move])
+      setLastMove({ from: { row: fromRow, col: fromCol }, to: { row: toRow, col: toCol } })
+
+      // Clear hints when a move is made
+      setHintSquares([])
+
+      // Start timer on first move
+      if (moveHistory.length === 0) {
+        setTimerActive(true)
+      }
 
       const nextPlayer = currentPlayer === 'white' ? 'black' : 'white'
       setCurrentPlayer(nextPlayer)
@@ -177,8 +197,11 @@ export function useMoveRules() {
 
       return true
     },
-    [boardState, currentPlayer, hasMoved, enPassantTarget, setBoardState, setCapturedPieces, setScore, setPromotionData, setHasMoved, setEnPassantTarget, setMoveHistory, setCurrentPlayer, setGameOver]
+    [boardState, currentPlayer, hasMoved, enPassantTarget, moveHistory.length, setBoardState, setCapturedPieces, setScore, setPromotionData, setHasMoved, setEnPassantTarget, setMoveHistory, setLastMove, setHintSquares, setTimerActive, setCurrentPlayer, setGameOver]
   )
+
+  // Check if current player is in check
+  const inCheck = isInCheck(currentPlayer, boardState)
 
   // Computer AI
   useComputerAI({
@@ -190,6 +213,7 @@ export function useMoveRules() {
     promotionData,
     hasMoved,
     moveHistory,
+    inCheck,
     isComputerThinking,
     setIsComputerThinking,
     makeMove,
@@ -231,14 +255,97 @@ export function useMoveRules() {
 
   const handleUndo = useCallback(() => {
     if (moveHistory.length === 0) return
-    console.log('Undo requested')
-  }, [moveHistory.length])
+
+    const newHistory = moveHistory.slice(0, -1)
+
+    // Reconstruct the board state by replaying all moves except the last one
+    let newBoard = JSON.parse(JSON.stringify(INITIAL_BOARD))
+    let newCapturedPieces = { white: [], black: [] }
+    let newScore = { white: 0, black: 0 }
+    let newHasMoved = {
+      white: { king: false, rookLeft: false, rookRight: false },
+      black: { king: false, rookLeft: false, rookRight: false },
+    }
+    let newEnPassantTarget: Position | null = null
+
+    // Replay all moves except the last one
+    for (let i = 0; i < newHistory.length; i++) {
+      const move = newHistory[i]
+      const piece = newBoard[move.from.row][move.from.col]
+      const pieceInfo = getPieceInfo(piece)
+
+      if (!pieceInfo) continue
+
+      // Check for castling
+      const isCastling =
+        pieceInfo.type === 'king' &&
+        Math.abs(move.to.col - move.from.col) === 2 &&
+        isValidCastling(move.from.row, move.from.col, move.to.row, move.to.col, newBoard, newHasMoved[pieceInfo.color])
+
+      // Execute the move
+      const result = executeMove(
+        move.from.row,
+        move.from.col,
+        move.to.row,
+        move.to.col,
+        newBoard,
+        newEnPassantTarget,
+        isCastling
+      )
+
+      newBoard = result.newBoard
+
+      // Handle promotion
+      if (move.promotion) {
+        newBoard[move.to.row][move.to.col] = PIECES[pieceInfo.color][move.promotion]
+      }
+
+      // Handle captures
+      if (result.capturedPiece) {
+        newCapturedPieces[pieceInfo.color].push(result.capturedPiece)
+        newScore[pieceInfo.color] += getPieceValue(result.capturedPiece)
+      }
+
+      // Track piece movements for castling
+      if (pieceInfo.type === 'king') {
+        newHasMoved[pieceInfo.color].king = true
+      } else if (pieceInfo.type === 'rook') {
+        if (move.from.col === 0) {
+          newHasMoved[pieceInfo.color].rookLeft = true
+        } else if (move.from.col === 7) {
+          newHasMoved[pieceInfo.color].rookRight = true
+        }
+      }
+
+      // Update en passant target for pawn double moves
+      if (pieceInfo.type === 'pawn' && Math.abs(move.to.row - move.from.row) === 2) {
+        newEnPassantTarget = { row: (move.from.row + move.to.row) / 2, col: move.from.col }
+      } else {
+        newEnPassantTarget = null
+      }
+    }
+
+    // Update all states
+    setBoardState(newBoard)
+    setMoveHistory(newHistory)
+    setCapturedPieces(newCapturedPieces)
+    setScore(newScore)
+    setHasMoved(newHasMoved)
+    setEnPassantTarget(newEnPassantTarget)
+    setCurrentPlayer(newHistory.length % 2 === 0 ? 'white' : 'black')
+    setLastMove(newHistory.length > 0 ? { from: newHistory[newHistory.length - 1].from, to: newHistory[newHistory.length - 1].to } : null)
+    setSelectedSquare(null)
+    setValidMoves([])
+    setGameOver(null)
+  }, [moveHistory, setBoardState, setMoveHistory, setCapturedPieces, setScore, setHasMoved, setEnPassantTarget, setCurrentPlayer, setLastMove, setSelectedSquare, setValidMoves, setGameOver])
 
   const handleHint = useCallback(() => {
-    if (hintsRemaining === 0) return
-    setHintsRemaining((prev) => prev - 1)
-    console.log('Hint requested')
-  }, [hintsRemaining, setHintsRemaining])
+    // Get the best moves (unlimited hints)
+    const bestMoves = getBestMoves(boardState, currentPlayer, enPassantTarget, hasMoved)
+
+    // Set the hint squares (will be cleared when player makes a move)
+    setHintSquares(bestMoves)
+  }, [boardState, currentPlayer, enPassantTarget, hasMoved, setHintSquares])
 
   const handleDragStart = useCallback(
     (row: number, col: number) => {
@@ -280,8 +387,6 @@ export function useMoveRules() {
     setShowModal(true)
   }, [resetGame, setShowModal])
 
-  const inCheck = isInCheck(currentPlayer, boardState)
-
   return {
     boardState,
     currentPlayer,
@@ -298,6 +403,11 @@ export function useMoveRules() {
     gameOver,
     inCheck,
     isComputerThinking,
+    lastMove,
+    whiteTimeLeft,
+    blackTimeLeft,
+    timerActive,
+    hintSquares,
     handleSquareClick,
     handleDragStart,
     handleDragOver,

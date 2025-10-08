@@ -62,12 +62,22 @@ function Home() {
                 <path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </Link>
-            <a href="#features" className="btn-hero btn-hero-secondary">
-              <span>Learn More</span>
-              <svg className="chevron-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"/>
-              </svg>
-            </a>
+            <Link to="/learning" className="btn-secondary">🧩 Puzzles</Link>
+            <a href="#features" className="btn-secondary">Learn More</a>
+          </div>
+          <div className="hero-stats">
+            <div className="stat-item">
+              <div className="stat-number">3</div>
+              <div className="stat-label">Game Modes</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-number">100%</div>
+              <div className="stat-label">Free to Play</div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-number">∞</div>
+              <div className="stat-label">Unlimited Games</div>
+            </div>
           </div>
 
           <div className="scroll-indicator">

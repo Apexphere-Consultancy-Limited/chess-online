@@ -9,7 +9,7 @@ import {
   PieceSymbol,
   Position,
 } from '../../types/chess'
-import { getPieceInfo } from './gameBoard'
+import { getPieceInfo, wouldBeInCheck } from './gameBoard'
 
 // ============================================================================
 // PIECE-SPECIFIC MOVEMENT RULES
@@ -145,9 +145,18 @@ export function isValidKingMove(
   const rowDiff = Math.abs(toRow - fromRow)
   const colDiff = Math.abs(toCol - fromCol)
 
-  // Normal king move (1 square in any direction)
-  // Note: Castling (2 squares) is validated separately in isValidCastling
-  return rowDiff <= 1 && colDiff <= 1
+  // Cannot stay in the same square
+  if (rowDiff === 0 && colDiff === 0) {
+    return false
+  }
+
+  // Normal king move (1 square in any direction only)
+  // Castling is NOT validated here - it's checked separately in makeMove
+  if (rowDiff <= 1 && colDiff <= 1) {
+    return true
+  }
+
+  return false
 }
 
 // ============================================================================
@@ -236,6 +245,7 @@ export function isValidMove(
     case 'queen':
       return isValidQueenMove(fromRow, fromCol, toRow, toCol, boardState)
     case 'king':
+      // For basic validation, just check 1-square moves (castling handled separately)
       return isValidKingMove(fromRow, fromCol, toRow, toCol)
     default:
       return false
@@ -253,7 +263,10 @@ export function getValidMoves(
   for (let toRow = 0; toRow < 8; toRow++) {
     for (let toCol = 0; toCol < 8; toCol++) {
       if (isValidMove(row, col, toRow, toCol, boardState, enPassantTarget)) {
-        validMoves.push({ row: toRow, col: toCol })
+        // Only include moves that don't leave/keep the king in check
+        if (!wouldBeInCheck(row, col, toRow, toCol, boardState)) {
+          validMoves.push({ row: toRow, col: toCol })
+        }
       }
     }
   }

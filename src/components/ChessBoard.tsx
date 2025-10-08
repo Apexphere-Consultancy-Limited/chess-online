@@ -6,6 +6,8 @@ interface ChessBoardProps {
   selectedSquare: Position | null
   validMoves: Position[]
   draggedPiece: Position | null
+  lastMove: { from: Position; to: Position } | null
+  hintSquares: { from: Position; to: Position; rank: 'gold' }[]
   onSquareClick: (row: number, col: number) => void
   onDragStart: (row: number, col: number) => void
   onDragOver: (e: React.DragEvent) => void
@@ -18,6 +20,8 @@ function ChessBoard({
   selectedSquare,
   validMoves,
   draggedPiece,
+  lastMove,
+  hintSquares,
   onSquareClick,
   onDragStart,
   onDragOver,
@@ -40,6 +44,24 @@ function ChessBoard({
             draggedPiece !== null &&
             draggedPiece.row === rowIndex &&
             draggedPiece.col === colIndex
+          const isLastMoveFrom =
+            lastMove !== null &&
+            lastMove.from.row === rowIndex &&
+            lastMove.from.col === colIndex
+          const isLastMoveTo =
+            lastMove !== null &&
+            lastMove.to.row === rowIndex &&
+            lastMove.to.col === colIndex
+
+          // Check if this square is a hint square
+          let hintRank: 'gold' | null = null
+          for (const hint of hintSquares) {
+            if ((hint.from.row === rowIndex && hint.from.col === colIndex) ||
+                (hint.to.row === rowIndex && hint.to.col === colIndex)) {
+              hintRank = hint.rank
+              break
+            }
+          }
 
           return (
             <Square
@@ -51,6 +73,9 @@ function ChessBoard({
               isSelected={isSelected}
               isValidMove={isValidMove}
               isDragging={isDragging}
+              isLastMoveFrom={isLastMoveFrom}
+              isLastMoveTo={isLastMoveTo}
+              hintRank={hintRank}
               onClick={onSquareClick}
               onDragStart={onDragStart}
               onDragOver={onDragOver}

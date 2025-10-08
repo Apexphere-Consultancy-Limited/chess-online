@@ -59,6 +59,9 @@ export interface GameState {
   hasMoved: HasMoved
   enPassantTarget: Position | null
   hintsRemaining: number
+  whiteTimeLeft: number
+  blackTimeLeft: number
+  timerActive: boolean
 }
 
 export interface PromotionData {

@@ -2,18 +2,18 @@ interface GameControlsProps {
   onUndo: () => void
   onHint: () => void
   onReset: () => void
-  hintsRemaining: number
   canUndo: boolean
+  gameMode: string
 }
 
-function GameControls({ onUndo, onHint, onReset, hintsRemaining, canUndo }: GameControlsProps) {
+function GameControls({ onUndo, onHint, onReset, canUndo, gameMode }: GameControlsProps) {
   return (
     <div className="game-controls">
       <button
         className="control-btn"
         id="undoBtn"
         onClick={onUndo}
-        disabled={!canUndo}
+        disabled={!canUndo || gameMode === 'friend'}
       >
         Undo Move
       </button>
@@ -21,9 +21,8 @@ function GameControls({ onUndo, onHint, onReset, hintsRemaining, canUndo }: Game
         className="control-btn hint-btn"
         id="hintBtn"
         onClick={onHint}
-        disabled={hintsRemaining === 0}
       >
-        💡 Get Hint (<span id="hintsLeft">{hintsRemaining}</span> left)
+        💡 Get Hint
       </button>
       <button
         className="control-btn reset-btn"
