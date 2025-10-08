@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { Navigate, useParams } from 'react-router-dom'
 import GameModeModal from '../components/GameModeModal'
 import PromotionModal from '../components/PromotionModal'
 import GameOverModal from '../components/GameOverModal'
@@ -10,12 +10,45 @@ import GameControls from '../components/GameControls'
 import Timer from '../components/Timer'
 import BotChat from '../components/BotChat'
 import { useMoveRules } from '../hooks/useMoveRules'
+import NavBar from '../components/NavBar'
+import OnlineGame from '../components/OnlineGame'
+import { useAuth } from '../auth/AuthProvider'
 
 function Game() {
+  const { gameId } = useParams<{ gameId: string }>()
+  const { user, loading } = useAuth()
+
+  if (gameId) {
+    if (loading) {
+      return (
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          Checking authentication...
+        </div>
+      )
+    }
+
+    if (!user) {
+      const redirectTo = encodeURIComponent(`/game/${gameId}`)
+      return <Navigate to={`/login?redirect=${redirectTo}`} replace />
+    }
+
+    return <OnlineGame />
+  }
+
+  // Otherwise, render local game (vs Friend or vs AI)
+  const [showNavbar, setShowNavbar] = useState(true)
+
   useEffect(() => {
     document.body.classList.add('game-page')
+
+    // Auto-hide navbar after 3 seconds
+    const timer = setTimeout(() => {
+      setShowNavbar(false)
+    }, 3000)
+
     return () => {
       document.body.classList.remove('game-page')
+      clearTimeout(timer)
     }
   }, [])
   const {
@@ -54,7 +87,10 @@ function Game() {
 
   return (
     <>
-      <Link to="/" className="back-home-link">← Back to Home</Link>
+      {/* Auto-hide top navigation (shows for 3 seconds on page load) */}
+      <div className={`game-top-nav ${showNavbar ? 'show' : ''}`}>
+        <NavBar />
+      </div>
 
       {showModal && (
         <GameModeModal

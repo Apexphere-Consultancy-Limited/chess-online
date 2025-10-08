@@ -1,4 +1,5 @@
 import { PieceSymbol } from '../types/chess'
+import { PieceIcon } from './PieceIcon'
 
 interface SquareProps {
   row: number
@@ -60,7 +61,7 @@ function Square({
           onDragStart={handleDragStart}
           onDragEnd={onDragEnd}
         >
-          {piece}
+          <PieceIcon piece={piece} />
         </div>
       )}
     </div>
