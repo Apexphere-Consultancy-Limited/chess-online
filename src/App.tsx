@@ -10,7 +10,7 @@ function App() {
     <Router>
       <AuthProvider>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Home 1 />} />
           <Route path="/login" element={<Login />} />
           <Route path="/game" element={<Game />} />
           <Route path="/game/:gameId" element={<Game />} />
