@@ -7,6 +7,8 @@ import ChessBoard from '../components/ChessBoard'
 import CapturedPieces from '../components/CapturedPieces'
 import MoveHistory from '../components/MoveHistory'
 import GameControls from '../components/GameControls'
+import Timer from '../components/Timer'
+import BotChat from '../components/BotChat'
 import { useMoveRules } from '../hooks/useMoveRules'
 import NavBar from '../components/NavBar'
 import OnlineGame from '../components/OnlineGame'
@@ -64,6 +66,12 @@ function Game() {
     gameOver,
     inCheck,
     isComputerThinking,
+    lastMove,
+    whiteTimeLeft,
+    blackTimeLeft,
+    timerActive,
+    hintSquares,
+    gameMode,
     handleSquareClick,
     handleDragStart,
     handleDragOver,
@@ -144,6 +152,8 @@ function Game() {
                 selectedSquare={selectedSquare}
                 validMoves={validMoves}
                 draggedPiece={draggedPiece}
+                lastMove={lastMove}
+                hintSquares={hintSquares}
                 onSquareClick={handleSquareClick}
                 onDragStart={handleDragStart}
                 onDragOver={handleDragOver}
@@ -153,9 +163,37 @@ function Game() {
             </div>
           </div>
 
-          {/* Right Side: Move History */}
-          <div className="move-history-panel">
-            <MoveHistory moves={moveHistory} />
+          {/* Right Side: Timers/Bot Chat and Move History */}
+          <div className="right-side-panel">
+            {gameMode === 'friend' ? (
+              <div className="timers-container">
+                <Timer
+                  color="black"
+                  timeLeft={blackTimeLeft}
+                  isActive={timerActive && currentPlayer === 'black'}
+                />
+                <Timer
+                  color="white"
+                  timeLeft={whiteTimeLeft}
+                  isActive={timerActive && currentPlayer === 'white'}
+                />
+              </div>
+            ) : (
+              <BotChat
+                moveCount={moveHistory.length}
+                lastMove={moveHistory[moveHistory.length - 1] || ''}
+                currentPlayer={currentPlayer}
+                gameOver={!!gameOver}
+                winner={gameOver?.winner || null}
+                gameMode={gameMode}
+                inCheck={inCheck}
+                lastMoveCapture={moveHistory.length > 0 && moveHistory[moveHistory.length - 1]?.captured !== undefined}
+                isComputerThinking={isComputerThinking}
+              />
+            )}
+            <div className="move-history-panel">
+              <MoveHistory moves={moveHistory} />
+            </div>
           </div>
 
           {/* Bottom Row: Game Controls */}
@@ -163,8 +201,8 @@ function Game() {
             onUndo={handleUndo}
             onHint={handleHint}
             onReset={handleReset}
-            hintsRemaining={hintsRemaining}
             canUndo={moveHistory.length > 0}
+            gameMode={gameMode}
           />
         </div>
       </div>
