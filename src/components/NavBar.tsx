@@ -101,6 +101,11 @@ function NavBar() {
               </a>
             </li>
             <li>
+              <NavLink to="/lobby" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
+                Lobby
+              </NavLink>
+            </li>
+            <li>
               <a href="/#features" className={activeHash === '#features' ? 'active' : ''} onClick={handleLearnMoreClick}>Learn More</a>
             </li>
             <li>
@@ -153,6 +158,11 @@ function NavBar() {
               <a href="/" className={activeHash === '' && location.pathname === '/' ? 'active' : ''} onClick={(e) => { e.preventDefault(); scrollToTop(); }}>
                 Home
               </a>
+            </li>
+            <li>
+              <NavLink to="/lobby" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
+                Lobby
+              </NavLink>
             </li>
             <li>
               <a href="/#features" className={activeHash === '#features' ? 'active' : ''} onClick={handleLearnMoreClick}>Learn More</a>
