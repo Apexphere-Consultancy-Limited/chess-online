@@ -74,6 +74,53 @@ export function useGameBoard() {
   const [validMoves, setValidMoves] = useState<Position[]>([])
   const [draggedPiece, setDraggedPiece] = useState<Position | null>(null)
   const [isComputerThinking, setIsComputerThinking] = useState(false)
+  const [lastMove, setLastMove] = useState<{ from: Position; to: Position } | null>(null)
+  const [hintSquares, setHintSquares] = useState<{ from: Position; to: Position; rank: 'gold' }[]>([])
+
+  // Timer State (in seconds)
+  const [whiteTimeLeft, setWhiteTimeLeft] = useState(savedState?.whiteTimeLeft ?? 600) // 10 minutes = 600 seconds
+  const [blackTimeLeft, setBlackTimeLeft] = useState(savedState?.blackTimeLeft ?? 600)
+  const [timerActive, setTimerActive] = useState(savedState?.timerActive ?? false)
+
+  // Timer countdown effect
+  useEffect(() => {
+    if (!timerActive || gameOver) return
+
+    const interval = setInterval(() => {
+      if (currentPlayer === 'white') {
+        setWhiteTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval)
+            setTimerActive(false)
+            return 0
+          }
+          return prev - 1
+        })
+      } else {
+        setBlackTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval)
+            setTimerActive(false)
+            return 0
+          }
+          return prev - 1
+        })
+      }
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [timerActive, currentPlayer, gameOver])
+
+  // Check for time out
+  useEffect(() => {
+    if (whiteTimeLeft === 0 && !gameOver) {
+      setGameOver({ winner: 'black', reason: 'timeout' })
+      setTimerActive(false)
+    } else if (blackTimeLeft === 0 && !gameOver) {
+      setGameOver({ winner: 'white', reason: 'timeout' })
+      setTimerActive(false)
+    }
+  }, [whiteTimeLeft, blackTimeLeft, gameOver, setGameOver])
 
   // Save game state to localStorage whenever it changes
   useEffect(() => {
@@ -88,6 +135,9 @@ export function useGameBoard() {
       hasMoved,
       enPassantTarget,
       gameOver: gameOver ?? false,
+      whiteTimeLeft,
+      blackTimeLeft,
+      timerActive,
     }
     saveGameState(gameState)
   }, [
@@ -101,6 +151,9 @@ export function useGameBoard() {
     hasMoved,
     enPassantTarget,
     gameOver,
+    whiteTimeLeft,
+    blackTimeLeft,
+    timerActive,
   ])
 
   const resetGame = () => {
@@ -121,6 +174,11 @@ export function useGameBoard() {
     setValidMoves([])
     setDraggedPiece(null)
     setIsComputerThinking(false)
+    setLastMove(null)
+    setWhiteTimeLeft(600)
+    setBlackTimeLeft(600)
+    setTimerActive(false)
+    setHintSquares([])
     localStorage.removeItem(STORAGE_KEY)
   }
 
@@ -157,6 +215,16 @@ export function useGameBoard() {
     setDraggedPiece,
     isComputerThinking,
     setIsComputerThinking,
+    lastMove,
+    setLastMove,
+    whiteTimeLeft,
+    setWhiteTimeLeft,
+    blackTimeLeft,
+    setBlackTimeLeft,
+    timerActive,
+    setTimerActive,
+    hintSquares,
+    setHintSquares,
     resetGame,
   }
 }

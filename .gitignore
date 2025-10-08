@@ -34,3 +34,6 @@ lerna-debug.log*
 .cache/
 .parcel-cache/
 .vite/
+
+# Assets
+src/resources/

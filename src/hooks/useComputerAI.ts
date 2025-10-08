@@ -25,6 +25,7 @@ interface UseComputerAIProps {
   isComputerThinking: boolean
   hasMoved: HasMoved
   moveHistory: Move[]
+  inCheck: boolean
   makeMove: (
     fromRow: number,
     fromCol: number,
@@ -45,6 +46,7 @@ export function useComputerAI({
   isComputerThinking,
   hasMoved,
   moveHistory,
+  inCheck,
   makeMove,
 }: UseComputerAIProps) {
   const isMountedRef = useRef(true)
@@ -71,8 +73,11 @@ export function useComputerAI({
       setIsComputerThinking(true)
 
       try {
+        // Determine delay based on whether bot is in check
+        const thinkingDelay = inCheck ? 10000 : 2000 // 10 seconds if in check, 2 seconds normally
+
         await new Promise<void>((resolve) => {
-          delayTimer = window.setTimeout(() => resolve(), 600)
+          delayTimer = window.setTimeout(() => resolve(), thinkingDelay)
         })
 
         if (cancelled) {
@@ -181,6 +186,7 @@ export function useComputerAI({
     promotionData,
     hasMoved,
     moveHistory,
+    inCheck,
     makeMove,
     setIsComputerThinking,
   ])

@@ -34,6 +34,7 @@ function Home() {
                 <path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </Link>
+            <Link to="/learning" className="btn-secondary">🧩 Puzzles</Link>
             <a href="#features" className="btn-secondary">Learn More</a>
           </div>
           <div className="hero-stats">
