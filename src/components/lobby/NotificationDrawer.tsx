@@ -31,17 +31,16 @@ function formatRelativeTime(isoDate: string) {
 
 function buildMessage(notification: LobbyNotification) {
   const { type, payload } = notification
-  const challenger = payload?.challengerUsername ?? 'Opponent'
   const opponent = payload?.opponentUsername ?? 'Opponent'
   switch (type) {
     case 'challenge_received':
-      return `${challenger} challenged you${payload?.lobbySlug ? ` in ${payload.lobbySlug}` : ''}.`
+      return `${opponent} challenged you${payload?.lobbySlug ? ` in ${payload.lobbySlug}` : ''}.`
     case 'challenge_accepted':
       return `${opponent} accepted your challenge${payload?.lobbySlug ? ` in ${payload.lobbySlug}` : ''}.`
     case 'challenge_declined':
       return `${opponent} declined your challenge.`
     case 'challenge_cancelled':
-      return `${challenger} cancelled the challenge${payload?.lobbySlug ? ` in ${payload.lobbySlug}` : ''}.`
+      return `${opponent} cancelled the challenge${payload?.lobbySlug ? ` in ${payload.lobbySlug}` : ''}.`
     case 'game_ready':
       return `Game is ready${payload?.lobbySlug ? ` in ${payload.lobbySlug}` : ''}.`
     default:

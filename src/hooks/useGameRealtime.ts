@@ -32,7 +32,6 @@ export function useGameRealtime(
           filter: `game_id=eq.${gameId}`,
         },
         (payload) => {
-          console.log('New move received:', payload.new)
           onMove({
             ...(payload.new as Move),
             source: 'database',

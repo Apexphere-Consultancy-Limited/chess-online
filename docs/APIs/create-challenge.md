@@ -76,8 +76,8 @@ On success, the backend inserts a `challenge_received` notification for the chal
 {
   "challengeId": "uuid",
   "lobbySlug": "main",
-  "challengerId": "uuid",
-  "challengerUsername": "player1"
+  "opponentId": "uuid",
+  "opponentUsername": "player1"
 }
 ```
 
