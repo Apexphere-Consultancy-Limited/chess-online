@@ -181,6 +181,11 @@
   letter-spacing: 0.03em;
 }
 
+.player-card__tag--challenge {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
 .player-card__meta {
   display: flex;
   gap: 0.75rem;
@@ -224,6 +229,15 @@
 
 .player-card__button:not(:disabled):hover {
   transform: translateY(-1px);
+}
+
+.player-card__button--cancel {
+  background: #ff7878;
+  color: white;
+}
+
+.player-card__button--cancel:not(:disabled):hover {
+  background: #ff5555;
 }
 
 .challenge-panel {

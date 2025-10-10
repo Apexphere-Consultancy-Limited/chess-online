@@ -45,14 +45,12 @@ interface UseLobbyResult {
   sessions: Array<LobbySession & { profileUsername?: string; profileRating?: number | null }>
   challenges: LobbyChallenge[]
   status: LobbySessionStatus
-  refreshing: boolean
   switchLobby: (slug: string) => Promise<void>
   setStatus: (status: LobbySessionStatus) => Promise<void>
   createChallenge: (input: { challengedId?: string; challengedUsername?: string; message?: string }) => Promise<void>
   respondToChallenge: (input: { challengeId: string; action: 'accept' | 'decline' }) => Promise<RespondToChallengeResponse | null>
   cancelChallenge: (challengeId: string) => Promise<void>
   leaveLobby: (keepalive?: boolean) => Promise<void>
-  refresh: () => Promise<void>
 }
 
 async function fetchProfiles(profileIds: string[]) {
@@ -78,7 +76,6 @@ export function useLobby(options?: UseLobbyOptions): UseLobbyResult {
 
   const isMountedRef = useRef(false)
   const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lobbies, setLobbies] = useState<Lobby[]>([])
   const [currentLobby, setCurrentLobby] = useState<Lobby | null>(null)
@@ -92,20 +89,23 @@ export function useLobby(options?: UseLobbyOptions): UseLobbyResult {
   const heartbeatRef = useRef<number | null>(null)
   const initializedRef = useRef(false)
   const challengeChangeRef = useRef<UseLobbyOptions['onChallengeChange']>(options?.onChallengeChange)
+  const challengesRefreshingRef = useRef(false)
+  const challengesRefreshPendingRef = useRef(false)
+  const lastChallengeUpdateRef = useRef<{ id: string; timestamp: number } | null>(null)
 
-useEffect(() => {
-  isMountedRef.current = true
-  return () => {
-    isMountedRef.current = false
-  }
-}, [])
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
-useEffect(() => {
-  challengeChangeRef.current = options?.onChallengeChange
-  return () => {
-    challengeChangeRef.current = undefined
-  }
-}, [options?.onChallengeChange])
+  useEffect(() => {
+    challengeChangeRef.current = options?.onChallengeChange
+    return () => {
+      challengeChangeRef.current = undefined
+    }
+  }, [options?.onChallengeChange])
 
   const setStatus = useCallback(
     async (nextStatus: LobbySessionStatus) => {
@@ -151,49 +151,91 @@ useEffect(() => {
       setChallenges([])
       return
     }
-    const { data, error: challengesError } = await supabase
-      .from('challenges')
-      .select('id, lobby_id, challenger_id, challenged_id, status, message, expires_at, created_at, updated_at')
-      .or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`)
-      .order('created_at', { ascending: false })
-    if (challengesError) {
-      throw challengesError
+    if (challengesRefreshingRef.current) {
+      challengesRefreshPendingRef.current = true
+      return
     }
+    challengesRefreshingRef.current = true
+    try {
+      const { data, error: challengesError } = await supabase
+        .from('challenges')
+        .select('id, lobby_id, challenger_id, challenged_id, status, message, expires_at, created_at, updated_at')
+        .or(`challenger_id.eq.${userId},challenged_id.eq.${userId}`)
+        .order('created_at', { ascending: false })
+      if (challengesError) {
+        throw challengesError
+      }
 
-    const lobbyIds = Array.from(new Set((data ?? []).map((challenge) => challenge.lobby_id).filter(Boolean))) as string[]
-    const profileIds = Array.from(
-      new Set(
-        (data ?? [])
-          .flatMap((challenge) => [challenge.challenger_id, challenge.challenged_id])
-          .filter(Boolean),
-      ),
-    )
+      const lobbyIds = Array.from(new Set((data ?? []).map((challenge) => challenge.lobby_id).filter(Boolean))) as string[]
+      const profileIds = Array.from(
+        new Set(
+          (data ?? [])
+            .flatMap((challenge) => [challenge.challenger_id, challenge.challenged_id])
+            .filter(Boolean),
+        ),
+      )
 
-    const [lobbiesData, profileMap] = await Promise.all([
-      lobbyIds.length
-        ? supabase
-            .from('lobbies')
-            .select('*')
-            .in('id', lobbyIds)
-            .then(({ data: records }) => records ?? [])
-        : Promise.resolve([]),
-      fetchProfiles(profileIds),
-    ])
+      const [lobbiesData, profileMap] = await Promise.all([
+        lobbyIds.length
+          ? supabase
+              .from('lobbies')
+              .select('*')
+              .in('id', lobbyIds)
+              .then(({ data: records }) => records ?? [])
+          : Promise.resolve([]),
+        fetchProfiles(profileIds),
+      ])
 
-    const lobbyMap = new Map<string, Lobby>()
-    lobbiesData.forEach((lobby) => {
-      lobbyMap.set(lobby.id, lobby as Lobby)
-    })
+      const lobbyMap = new Map<string, Lobby>()
+      lobbiesData.forEach((lobby) => {
+        lobbyMap.set(lobby.id, lobby as Lobby)
+      })
 
-    const enhanced = (data ?? []).map((challenge) => ({
-      ...challenge,
-      lobby: lobbyMap.get(challenge.lobby_id ?? '') ?? undefined,
-      challenger_profile: profileMap.get(challenge.challenger_id ?? ''),
-      challenged_profile: profileMap.get(challenge.challenged_id ?? ''),
-    }))
+      const enhanced = (data ?? []).map((challenge) => ({
+        ...challenge,
+        lobby: lobbyMap.get(challenge.lobby_id ?? '') ?? undefined,
+        challenger_profile: profileMap.get(challenge.challenger_id ?? ''),
+        challenged_profile: profileMap.get(challenge.challenged_id ?? ''),
+      }))
 
-    setChallenges(enhanced as LobbyChallenge[])
+      setChallenges(enhanced as LobbyChallenge[])
+    } finally {
+      challengesRefreshingRef.current = false
+      if (challengesRefreshPendingRef.current) {
+        challengesRefreshPendingRef.current = false
+        void refreshChallenges()
+      }
+    }
   }, [userId])
+
+  const handleChallengeRealtime = useCallback(
+    async (payload: RealtimePostgresChangesPayload<LobbyChallenge>) => {
+      const challenge = (payload.new ?? payload.old) as LobbyChallenge | undefined
+      if (!challenge || !userId) {
+        return
+      }
+      const involvesUser = challenge.challenger_id === userId || challenge.challenged_id === userId
+      if (!involvesUser) {
+        return
+      }
+
+      // Deduplicate rapid-fire events for the same challenge
+      const now = Date.now()
+      const last = lastChallengeUpdateRef.current
+      if (last && last.id === challenge.id && now - last.timestamp < 500) {
+        return
+      }
+      lastChallengeUpdateRef.current = { id: challenge.id, timestamp: now }
+
+      try {
+        await refreshChallenges()
+        challengeChangeRef.current?.(payload)
+      } catch (err) {
+        console.error('Failed to refresh challenges via realtime', err)
+      }
+    },
+    [refreshChallenges, userId],
+  )
 
   const leaveLobby = useCallback(
     async (keepalive = false) => {
@@ -237,42 +279,65 @@ useEffect(() => {
   )
 
   const subscribeToLobby = useCallback(
-    (lobbyId: string, userIdForFilter: string | null) => {
+    (lobbyId: string) => {
       if (lobbyChannelRef.current) {
         const existing = lobbyChannelRef.current
         lobbyChannelRef.current = null
         void supabase.removeChannel(existing)
       }
 
-      const challengeFilter = userIdForFilter
-        ? `and(lobby_id.eq.${lobbyId},or=(challenger_id.eq.${userIdForFilter},challenged_id.eq.${userIdForFilter}))`
-        : `lobby_id=eq.${lobbyId}`
+      const channel = supabase.channel(`lobby:${lobbyId}`, {
+        config: {
+          broadcast: { self: false },
+        },
+      })
 
-      const channel = supabase
-        .channel(`lobby:${lobbyId}`)
-        .on(
+      // Listen to lobby sessions changes
+      channel.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'lobby_sessions', filter: `lobby_id=eq.${lobbyId}` },
+        async () => {
+          try {
+            await refreshSessions(lobbyId)
+          } catch (err) {
+            console.error('Failed to refresh sessions via realtime', err)
+          }
+        },
+      )
+
+      // Listen to all challenge changes involving current user
+      // This covers both challenges in this lobby and challenges where user is challenged
+      if (userId) {
+        channel.on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'lobby_sessions', filter: `lobby_id=eq.${lobbyId}` },
-          async () => {
-            try {
-              await refreshSessions(lobbyId)
-            } catch (err) {
-              console.error('Failed to refresh sessions via realtime', err)
-            }
-          },
+          { event: '*', schema: 'public', table: 'challenges', filter: `challenger_id=eq.${userId}` },
+          handleChallengeRealtime,
         )
-        .on(
+        channel.on(
           'postgres_changes',
-          { event: '*', schema: 'public', table: 'challenges', filter: challengeFilter },
-          async (payload) => {
-            try {
-              await refreshChallenges()
-              challengeChangeRef.current?.(payload as RealtimePostgresChangesPayload<LobbyChallenge>)
-            } catch (err) {
-              console.error('Failed to refresh challenges via realtime', err)
-            }
-          },
+          { event: '*', schema: 'public', table: 'challenges', filter: `challenged_id=eq.${userId}` },
+          handleChallengeRealtime,
         )
+      }
+
+      // Broadcast events for instant challenge notifications
+      channel.on('broadcast', { event: 'challenge' }, ({ payload }) => {
+        if (userId && payload.challenged_id === userId) {
+          void refreshChallenges()
+        }
+      })
+
+      channel.on('broadcast', { event: 'challenge_cancelled' }, ({ payload }) => {
+        if (userId && payload.challenged_id === userId) {
+          void refreshChallenges()
+        }
+      })
+
+      channel.on('broadcast', { event: 'challenge_response' }, ({ payload }) => {
+        if (userId && payload.challenger_id === userId) {
+          void refreshChallenges()
+        }
+      })
 
       channel.subscribe((status) => {
         if (status === 'CHANNEL_ERROR') {
@@ -284,7 +349,7 @@ useEffect(() => {
             lobbyChannelRef.current = null
             window.setTimeout(() => {
               if (isMountedRef.current) {
-                subscribeToLobby(lobbyId, userIdForFilter)
+                subscribeToLobby(lobbyId)
               }
             }, 50)
           }
@@ -293,8 +358,9 @@ useEffect(() => {
 
       lobbyChannelRef.current = channel
     },
-    [refreshChallenges, refreshSessions],
+    [handleChallengeRealtime, refreshChallenges, refreshSessions, userId],
   )
+
 
   const initialize = useCallback(async () => {
     if (!userId || initializedRef.current) {
@@ -360,7 +426,7 @@ useEffect(() => {
         setCurrentLobby(lobby)
         setStatusState(nextStatus)
         await Promise.all([refreshSessions(lobby.id), refreshChallenges()])
-        subscribeToLobby(lobby.id, userId)
+        subscribeToLobby(lobby.id)
         startHeartbeat(lobby.slug)
       }
       initializedRef.current = true
@@ -405,7 +471,6 @@ useEffect(() => {
     async (slug: string) => {
       if (!userId) return
       if (!slug || (currentLobby && slug === currentLobby.slug)) return
-      setRefreshing(true)
       setError(null)
       try {
         const response = await callEdgeFunction<UpsertSessionResponse>('upsert-lobby-session', {
@@ -421,70 +486,87 @@ useEffect(() => {
         if (lobby) {
           setCurrentLobby(lobby)
           await Promise.all([refreshSessions(lobby.id), refreshChallenges()])
-          subscribeToLobby(lobby.id, userId)
+          subscribeToLobby(lobby.id)
           startHeartbeat(lobby.slug)
         }
       } catch (err) {
         console.error('Failed to switch lobby', err)
         setError(err instanceof Error ? err.message : 'Failed to switch lobby')
-      } finally {
-        setRefreshing(false)
       }
     },
     [currentLobby, refreshChallenges, refreshSessions, startHeartbeat, status, subscribeToLobby, userId],
   )
 
-  const refresh = useCallback(async () => {
-    if (!currentLobby) return
-    setRefreshing(true)
-    try {
-      await Promise.all([refreshSessions(currentLobby.id), refreshChallenges()])
-    } catch (err) {
-      console.error('Failed to refresh lobby data', err)
-      setError(err instanceof Error ? err.message : 'Failed to refresh lobby data')
-    } finally {
-      setRefreshing(false)
-    }
-  }, [currentLobby, refreshChallenges, refreshSessions])
-
   const createChallenge = useCallback(
     async (input: { challengedId?: string; challengedUsername?: string; message?: string }) => {
       setError(null)
       try {
-        await callEdgeFunction<CreateChallengeResponse>('create-challenge', {
+        const response = await callEdgeFunction<CreateChallengeResponse>('create-challenge', {
           challengedId: input.challengedId,
           challengedUsername: input.challengedUsername,
           message: input.message,
         })
         await refreshChallenges()
+
+        // Broadcast challenge to lobby channel for instant notification
+        if (currentLobby && lobbyChannelRef.current && response.challenge) {
+          await lobbyChannelRef.current.send({
+            type: 'broadcast',
+            event: 'challenge',
+            payload: {
+              challenged_id: response.challenge.challenged_id,
+              challenger_id: response.challenge.challenger_id,
+              challenge_id: response.challenge.id,
+            },
+          })
+        }
       } catch (err) {
         console.error('Failed to create challenge', err)
         setError(err instanceof Error ? err.message : 'Failed to create challenge')
         throw err
       }
     },
-    [refreshChallenges],
+    [currentLobby, refreshChallenges],
   )
 
   const cancelChallenge = useCallback(
     async (challengeId: string) => {
       setError(null)
       try {
+        // Find the challenge before cancelling to get challenged_id for broadcast
+        const challenge = challenges.find(c => c.id === challengeId)
+
         await callEdgeFunction<CancelChallengeResponse>('cancel-challenge', { challengeId })
         await refreshChallenges()
+
+        // Broadcast cancellation for instant notification to the challenged player
+        if (currentLobby && lobbyChannelRef.current && challenge) {
+          await lobbyChannelRef.current.send({
+            type: 'broadcast',
+            event: 'challenge_cancelled',
+            payload: {
+              challenged_id: challenge.challenged_id,
+              challenger_id: challenge.challenger_id,
+              challenge_id: challengeId,
+            },
+          })
+        }
       } catch (err) {
         console.error('Failed to cancel challenge', err)
         setError(err instanceof Error ? err.message : 'Failed to cancel challenge')
         throw err
       }
     },
-    [refreshChallenges],
+    [challenges, currentLobby, refreshChallenges],
   )
 
   const respondToChallenge = useCallback(
     async (input: { challengeId: string; action: 'accept' | 'decline' }) => {
       setError(null)
       try {
+        // Find the challenge before responding to get challenger_id for broadcast
+        const challenge = challenges.find(c => c.id === input.challengeId)
+
         const response = await callEdgeFunction<RespondToChallengeResponse>('respond-to-challenge', {
           challengeId: input.challengeId,
           action: input.action,
@@ -496,6 +578,21 @@ useEffect(() => {
         if (response.status === 'accepted') {
           setStatusState('in_game')
         }
+
+        // Broadcast response for instant notification to the challenger
+        if (currentLobby && lobbyChannelRef.current && challenge) {
+          await lobbyChannelRef.current.send({
+            type: 'broadcast',
+            event: 'challenge_response',
+            payload: {
+              challenger_id: challenge.challenger_id,
+              challenged_id: challenge.challenged_id,
+              challenge_id: input.challengeId,
+              action: input.action,
+            },
+          })
+        }
+
         return response
       } catch (err) {
         console.error('Failed to respond to challenge', err)
@@ -503,7 +600,7 @@ useEffect(() => {
         throw err
       }
     },
-    [currentLobby, refreshChallenges, refreshSessions],
+    [challenges, currentLobby, refreshChallenges, refreshSessions],
   )
 
   const value = useMemo<UseLobbyResult>(
@@ -515,14 +612,12 @@ useEffect(() => {
       sessions,
       challenges,
       status,
-      refreshing,
       switchLobby,
       setStatus,
       createChallenge,
       respondToChallenge,
       cancelChallenge,
       leaveLobby,
-      refresh,
     }),
     [
       challenges,
@@ -531,8 +626,6 @@ useEffect(() => {
       leaveLobby,
       loading,
       lobbies,
-      refresh,
-      refreshing,
       respondToChallenge,
       sessions,
       setStatus,

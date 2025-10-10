@@ -53,8 +53,8 @@ Required
   {
     "challengeId": "uuid",
     "lobbySlug": "main",
-    "challengerId": "uuid",
-    "challengerUsername": "player1"
+    "opponentId": "uuid",
+    "opponentUsername": "player1"
   }
   ```
 

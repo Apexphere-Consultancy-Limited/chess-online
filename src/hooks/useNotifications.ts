@@ -33,6 +33,7 @@ export function useNotifications(options?: UseNotificationsOptions): UseNotifica
   const [error, setError] = useState<string | null>(null)
   const [notifications, setNotifications] = useState<LobbyNotification[]>([])
   const channelRef = useRef<RealtimeChannel | null>(null)
+  const onInsertRef = useRef<UseNotificationsOptions['onInsert']>(options?.onInsert)
 
   const isMountedRef = useRef(false)
 
@@ -64,7 +65,7 @@ export function useNotifications(options?: UseNotificationsOptions): UseNotifica
         setLoading(false)
       }
     }
-  }, [userId, options?.onInsert])
+  }, [userId])
 
   const attachRealtime = useCallback(() => {
     if (!userId) return
@@ -89,7 +90,7 @@ export function useNotifications(options?: UseNotificationsOptions): UseNotifica
             }
             return [newNotification, ...prev]
           })
-          options?.onInsert?.(newNotification)
+          onInsertRef.current?.(newNotification)
         },
       )
       .on(
@@ -127,11 +128,15 @@ export function useNotifications(options?: UseNotificationsOptions): UseNotifica
     })
 
     channelRef.current = channel
-  }, [userId, options?.onInsert])
+  }, [userId])
 
   useEffect(() => {
     void fetchNotifications()
   }, [fetchNotifications])
+
+  useEffect(() => {
+    onInsertRef.current = options?.onInsert
+  }, [options?.onInsert])
 
   useEffect(() => {
     isMountedRef.current = true

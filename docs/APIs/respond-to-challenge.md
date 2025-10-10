@@ -65,14 +65,38 @@ Required headers:
 
 On acceptance:
 - Creates a new `games` row with status `in_progress`.
-- Updates both participants’ `lobby_sessions` to `status = "in_game"`.
+- Updates both participants' `lobby_sessions` to `status = "in_game"`.
 - Emits notifications to both players:
-  - `challenge_accepted`
-  - `game_ready` (payload includes `gameId` and `lobbySlug`).
+  - `challenge_accepted` with payload:
+    ```json
+    {
+      "challengeId": "uuid",
+      "gameId": "uuid",
+      "opponentId": "uuid",
+      "opponentUsername": "player2",
+      "lobbySlug": "main"
+    }
+    ```
+  - `game_ready` with payload:
+    ```json
+    {
+      "gameId": "uuid",
+      "color": "white",
+      "lobbySlug": "main"
+    }
+    ```
 
 On decline:
 - Marks challenge as `declined`.
-- Sends `challenge_declined` notification to the challenger.
+- Sends `challenge_declined` notification to the challenger with payload:
+  ```json
+  {
+    "challengeId": "uuid",
+    "opponentId": "uuid",
+    "opponentUsername": "player2",
+    "lobbySlug": "main"
+  }
+  ```
 
 ## Example
 

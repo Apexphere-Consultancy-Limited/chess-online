@@ -9,8 +9,6 @@ interface LobbyHeaderProps {
   onSwitchLobby: (slug: string) => void
   onToggleNotifications: () => void
   unreadCount: number
-  onRefresh: () => void
-  refreshing: boolean
 }
 
 function LobbyHeader({
@@ -20,8 +18,6 @@ function LobbyHeader({
   onSwitchLobby,
   onToggleNotifications,
   unreadCount,
-  onRefresh,
-  refreshing,
 }: LobbyHeaderProps) {
   return (
     <header className="lobby-header">
@@ -41,9 +37,6 @@ function LobbyHeader({
         </div>
         <div className="lobby-header__actions">
           <span className={`lobby-status lobby-status--${status}`}>{status === 'available' ? 'Available' : 'In game'}</span>
-          <button type="button" className="lobby-header__button" onClick={onRefresh} disabled={refreshing}>
-            {refreshing ? 'Refreshing…' : 'Refresh'}
-          </button>
           <NotificationBell unreadCount={unreadCount} onClick={onToggleNotifications} />
         </div>
       </div>
@@ -52,7 +45,6 @@ function LobbyHeader({
         lobbies={lobbies}
         activeLobbyId={currentLobby?.id}
         onSelect={onSwitchLobby}
-        disabled={refreshing}
       />
     </header>
   )
