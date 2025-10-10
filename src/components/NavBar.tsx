@@ -102,14 +102,16 @@ function NavBar() {
             </li>
             <li>
               <NavLink to="/lobby" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
-                Lobby
+                Play Online
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/game" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
+                Play vs Bot
               </NavLink>
             </li>
             <li>
               <a href="/#features" className={activeHash === '#features' ? 'active' : ''} onClick={handleLearnMoreClick}>Learn More</a>
-            </li>
-            <li>
-              <a href="/#game-modes" className={activeHash === '#game-modes' ? 'active' : ''} onClick={handleGameModesClick}>Game Modes</a>
             </li>
           </ul>
         </div>
@@ -161,14 +163,16 @@ function NavBar() {
             </li>
             <li>
               <NavLink to="/lobby" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
-                Lobby
+                Play Online
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/game" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
+                Play vs Bot
               </NavLink>
             </li>
             <li>
               <a href="/#features" className={activeHash === '#features' ? 'active' : ''} onClick={handleLearnMoreClick}>Learn More</a>
-            </li>
-            <li>
-              <a href="/#game-modes" className={activeHash === '#game-modes' ? 'active' : ''} onClick={handleGameModesClick}>Game Modes</a>
             </li>
           </ul>
           <div className="nav-cta">
