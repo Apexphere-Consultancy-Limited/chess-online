@@ -23,6 +23,62 @@
     backdrop-filter: saturate(180%) blur(var(--nav-blur));
 }
 
+/* Dark navbar variant for pages with purple gradient background */
+body:has(.lobby-page) .navbar,
+body.game-page .navbar {
+    background: rgba(44, 62, 80, 0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+body:has(.lobby-page) .navbar .nav-links a,
+body:has(.lobby-page) .navbar .nav-menu a,
+body.game-page .navbar .nav-links a,
+body.game-page .navbar .nav-menu a {
+    color: rgba(255, 255, 255, 0.95);
+}
+
+body:has(.lobby-page) .navbar .nav-links a:hover,
+body:has(.lobby-page) .navbar .nav-menu a:hover,
+body.game-page .navbar .nav-links a:hover,
+body.game-page .navbar .nav-menu a:hover {
+    color: #81b64c;
+}
+
+body:has(.lobby-page) .navbar .nav-menu a.active,
+body.game-page .navbar .nav-menu a.active {
+    color: #81b64c;
+}
+
+body:has(.lobby-page) .navbar .nav-brand,
+body.game-page .navbar .nav-brand {
+    color: white;
+}
+
+body:has(.lobby-page) .navbar .user-name,
+body.game-page .navbar .user-name {
+    color: white;
+}
+
+body:has(.lobby-page) .navbar .menu-bar,
+body.game-page .navbar .menu-bar {
+    background: white;
+}
+
+body:has(.lobby-page) .navbar .menu-toggle,
+body.game-page .navbar .menu-toggle {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+body:has(.lobby-page) .navbar .nav-links,
+body.game-page .navbar .nav-links {
+    background: rgba(44, 62, 80, 0.98);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
 .nav-container {
     width: 100%;
     max-width: 100%;

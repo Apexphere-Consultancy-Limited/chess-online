@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import NavBar from '../components/NavBar'
 import LobbyHeader from '../components/lobby/LobbyHeader'
 import PlayerList from '../components/lobby/PlayerList'
 import ChallengePanel from '../components/lobby/ChallengePanel'
@@ -39,7 +40,7 @@ function Lobby() {
 
   const { notifications, unreadCount, loading: notificationsLoading, markRead, markAllRead } = useNotifications()
 
-    const currentUserId = user?.id ?? null
+  const currentUserId = user?.id ?? null
 
   const incomingChallenges = useMemo(
     () => challenges.filter((challenge) => challenge.challenged_id === currentUserId && challenge.status === 'pending'),
@@ -151,15 +152,17 @@ function Lobby() {
   }
 
   return (
-    <div className="lobby-page">
-      <LobbyHeader
-        currentLobby={currentLobby}
-        lobbies={lobbies}
-        status={status}
-        onSwitchLobby={(slug) => void switchLobby(slug)}
-        onToggleNotifications={() => setNotificationsOpen(true)}
-        unreadCount={unreadCount}
-      />
+    <>
+      <NavBar />
+      <div className="lobby-page">
+        <LobbyHeader
+          currentLobby={currentLobby}
+          lobbies={lobbies}
+          status={status}
+          onSwitchLobby={(slug) => void switchLobby(slug)}
+          onToggleNotifications={() => setNotificationsOpen(true)}
+          unreadCount={unreadCount}
+        />
 
       {combinedError && (
         <div className="lobby-error" role="alert">
@@ -247,7 +250,8 @@ function Lobby() {
           onCancel={() => setConfirmDecline(null)}
         />
       )}
-    </div>
+      </div>
+    </>
   )
 }
 
