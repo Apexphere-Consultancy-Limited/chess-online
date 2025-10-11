@@ -40,6 +40,12 @@ interface BotAvatarStates {
   lostGame?: string
 }
 
+const FALLBACK_EMOJIS: Record<string, string> = {
+  'ai-easy': '🤖',
+  'ai-medium': '😺',
+  'ai-hard': '🔥'
+}
+
 const BOT_PROFILES: Record<string, BotProfile> = {
   'ai-easy': {
     name: 'Botley',
@@ -169,11 +175,13 @@ const BotChat: React.FC<BotChatProps> = ({ moveCount, lastMove, currentPlayer, g
   const [message, setMessage] = useState(botProfile.greeting)
   const [isThinking, setIsThinking] = useState(false)
   const [currentEmotion, setCurrentEmotion] = useState<'idle' | 'celebrate' | 'capture' | 'lostPiece' | 'check' | 'scared' | 'thinking' | 'lostGame'>('idle')
+  const [imageError, setImageError] = useState(false)
 
-  // Reset message when bot profile changes
+  // Reset message and image error when bot profile changes
   useEffect(() => {
     setMessage(botProfile.greeting)
     setIsThinking(false)
+    setImageError(false)
   }, [gameMode, botProfile.greeting])
 
   // Determine emotion based on game state
@@ -271,22 +279,19 @@ const BotChat: React.FC<BotChatProps> = ({ moveCount, lastMove, currentPlayer, g
     <div className="bot-chat-container">
       <div className="bot-avatar">
         <div className="bot-image-wrapper" style={{ background: botProfile.avatarBg }}>
-          {botProfile.avatarType === 'image' ? (
+          {botProfile.avatarType === 'image' && !imageError ? (
             <img
               src={getCurrentAvatar()}
               alt={botProfile.name}
               className="bot-image-img"
-              onError={(e) => {
-                // Fallback to emoji if image fails to load
-                e.currentTarget.style.display = 'none'
-                const fallback = document.createElement('div')
-                fallback.className = 'bot-image'
-                fallback.textContent = '👑'
-                e.currentTarget.parentElement?.appendChild(fallback)
+              onError={() => {
+                setImageError(true)
               }}
             />
           ) : (
-            <div className="bot-image">{botProfile.avatar as string}</div>
+            <div className="bot-image">
+              {FALLBACK_EMOJIS[gameMode] || '🤖'}
+            </div>
           )}
         </div>
         <div className="bot-info">
