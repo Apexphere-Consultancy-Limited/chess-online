@@ -74,7 +74,7 @@ export function useComputerAI({
 
       try {
         // Determine delay based on whether bot is in check
-        const thinkingDelay = inCheck ? 10000 : 2000 // 10 seconds if in check, 2 seconds normally
+        const thinkingDelay = inCheck ? 6000 : 2000 // 6 seconds if in check, 2 seconds normally
 
         await new Promise<void>((resolve) => {
           delayTimer = window.setTimeout(() => resolve(), thinkingDelay)
@@ -95,7 +95,7 @@ export function useComputerAI({
             }
           }
         } else {
-          const depth = gameMode === 'ai-medium' ? 3 : 8
+          const depth = gameMode === 'ai-medium' ? 2 : 8
           const stockfishPromise = getStockfishBestMove({
             boardState,
             currentPlayer,

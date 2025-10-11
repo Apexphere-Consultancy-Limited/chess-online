@@ -3,6 +3,7 @@ import Home from './pages/Home'
 import Game from './pages/Game'
 import Login from './pages/Login'
 import Profile from './pages/Profile'
+import LearningMode from './pages/LearningMode'
 import { AuthProvider } from './auth/AuthProvider'
 import Lobby from './pages/Lobby'
 import RequireAuth from './auth/RequireAuth'
@@ -25,6 +26,7 @@ function App() {
             }
           />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/learning" element={<LearningMode />} />
         </Routes>
       </AuthProvider>
     </Router>
