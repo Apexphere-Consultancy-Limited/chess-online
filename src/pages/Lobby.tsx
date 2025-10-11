@@ -1,35 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
+import NavBar from '../components/NavBar'
 import LobbyHeader from '../components/lobby/LobbyHeader'
 import PlayerList from '../components/lobby/PlayerList'
 import ChallengePanel from '../components/lobby/ChallengePanel'
 import NotificationDrawer from '../components/lobby/NotificationDrawer'
+import ConfirmationModal from '../components/ConfirmationModal'
 import { useLobby } from '../hooks/useLobby'
 import { useNotifications } from '../hooks/useNotifications'
 import { useAuth } from '../auth/AuthProvider'
 import '../styles/lobby.css'
-import type { LobbyChallenge } from '../types/lobby'
 
 function Lobby() {
   const navigate = useNavigate()
-  const refreshChallengesRef = useRef<() => Promise<void>>(() => Promise.resolve())
-  const { notifications, unreadCount, loading: notificationsLoading, markRead, markAllRead, refresh: refreshNotifications } = useNotifications({
-    onInsert: (notification) => {
-      if (notification.type === 'challenge_received' || notification.type === 'challenge_cancelled' || notification.type === 'challenge_accepted' || notification.type === 'challenge_declined') {
-        void refreshChallengesRef.current()
-      }
-    },
-  })
-  const challengeNotificationHandler = useCallback(
-    (payload: RealtimePostgresChangesPayload<LobbyChallenge>) => {
-      if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-        void refreshNotifications({ silent: true })
-        void refreshChallengesRef.current()
-      }
-    },
-    [refreshNotifications],
-  )
   const { user } = useAuth()
   const {
     loading,
@@ -39,28 +22,23 @@ function Lobby() {
     sessions,
     challenges,
     status,
-    refreshing,
     switchLobby,
     createChallenge,
     respondToChallenge,
     cancelChallenge,
     leaveLobby,
-    refresh,
-  } = useLobby({ onChallengeChange: challengeNotificationHandler })
+  } = useLobby()
 
   const [challengeInFlight, setChallengeInFlight] = useState<string | null>(null)
   const [respondingTo, setRespondingTo] = useState<string | null>(null)
   const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
+  const [confirmChallenge, setConfirmChallenge] = useState<{ playerId: string; playerName: string } | null>(null)
+  const [confirmCancel, setConfirmCancel] = useState<{ challengeId: string; playerName: string } | null>(null)
+  const [confirmDecline, setConfirmDecline] = useState<{ challengeId: string; playerName: string } | null>(null)
 
-  useEffect(() => {
-    refreshChallengesRef.current = refresh
-  }, [refresh])
-
-  useEffect(() => {
-    refreshChallengesRef.current = refresh
-  }, [refresh])
+  const { notifications, unreadCount, loading: notificationsLoading, markRead, markAllRead } = useNotifications()
 
   const currentUserId = user?.id ?? null
 
@@ -69,26 +47,33 @@ function Lobby() {
     [challenges, currentUserId],
   )
 
-  const outgoingChallenges = useMemo(
-    () => challenges.filter((challenge) => challenge.challenger_id === currentUserId),
-    [challenges, currentUserId],
-  )
-
   const pendingChallengesMap = useMemo(() => {
-    const map: Record<string, 'pending' | 'unavailable'> = {}
-    outgoingChallenges
-      .filter((challenge) => challenge.status === 'pending')
+    const map: Record<string, { status: 'pending' | 'unavailable'; challengeId: string }> = {}
+    challenges
+      .filter((challenge) => challenge.challenger_id === currentUserId && challenge.status === 'pending')
       .forEach((challenge) => {
         if (challenge.challenged_id) {
-          map[challenge.challenged_id] = 'unavailable'
+          map[challenge.challenged_id] = {
+            status: 'unavailable',
+            challengeId: challenge.id,
+          }
         }
       })
     return map
-  }, [outgoingChallenges])
+  }, [challenges, currentUserId])
 
   const combinedError = localError ?? error
 
-  const handleChallenge = async (playerId: string) => {
+  const handleChallengeClick = (playerId: string) => {
+    const session = sessions.find((s) => s.player_id === playerId)
+    const playerName = session?.profileUsername ?? 'this player'
+    setConfirmChallenge({ playerId, playerName })
+  }
+
+  const handleChallengeConfirm = async () => {
+    if (!confirmChallenge) return
+    const { playerId } = confirmChallenge
+    setConfirmChallenge(null)
     setLocalError(null)
     setChallengeInFlight(playerId)
     try {
@@ -100,23 +85,53 @@ function Lobby() {
     }
   }
 
-  const handleRespond = async (challengeId: string, action: 'accept' | 'decline') => {
+  const handleAcceptClick = async (challengeId: string) => {
     setLocalError(null)
     setRespondingTo(challengeId)
     try {
-      const response = await respondToChallenge({ challengeId, action })
+      const response = await respondToChallenge({ challengeId, action: 'accept' })
       if (response?.status === 'accepted' && response.game) {
         await leaveLobby(false)
         navigate(`/game/${response.game.id}`)
       }
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : 'Failed to update challenge')
+      setLocalError(err instanceof Error ? err.message : 'Failed to accept challenge')
     } finally {
       setRespondingTo(null)
     }
   }
 
-  const handleCancel = async (challengeId: string) => {
+  const handleDeclineClick = (challengeId: string) => {
+    const challenge = challenges.find((c) => c.id === challengeId)
+    const playerName = challenge?.challenger_profile?.username ?? 'this player'
+    setConfirmDecline({ challengeId, playerName })
+  }
+
+  const handleDeclineConfirm = async () => {
+    if (!confirmDecline) return
+    const { challengeId } = confirmDecline
+    setConfirmDecline(null)
+    setLocalError(null)
+    setRespondingTo(challengeId)
+    try {
+      await respondToChallenge({ challengeId, action: 'decline' })
+    } catch (err) {
+      setLocalError(err instanceof Error ? err.message : 'Failed to decline challenge')
+    } finally {
+      setRespondingTo(null)
+    }
+  }
+
+  const handleCancelClick = (challengeId: string) => {
+    const challenge = challenges.find((c) => c.id === challengeId)
+    const playerName = challenge?.challenged_profile?.username ?? 'this player'
+    setConfirmCancel({ challengeId, playerName })
+  }
+
+  const handleCancelConfirm = async () => {
+    if (!confirmCancel) return
+    const { challengeId } = confirmCancel
+    setConfirmCancel(null)
     setLocalError(null)
     setCancellingId(challengeId)
     try {
@@ -137,17 +152,17 @@ function Lobby() {
   }
 
   return (
-    <div className="lobby-page">
-      <LobbyHeader
-        currentLobby={currentLobby}
-        lobbies={lobbies}
-        status={status}
-        onSwitchLobby={(slug) => void switchLobby(slug)}
-        onToggleNotifications={() => setNotificationsOpen(true)}
-        unreadCount={unreadCount}
-        onRefresh={() => void refresh()}
-        refreshing={refreshing}
-      />
+    <>
+      <NavBar />
+      <div className="lobby-page">
+        <LobbyHeader
+          currentLobby={currentLobby}
+          lobbies={lobbies}
+          status={status}
+          onSwitchLobby={(slug) => void switchLobby(slug)}
+          onToggleNotifications={() => setNotificationsOpen(true)}
+          unreadCount={unreadCount}
+        />
 
       {combinedError && (
         <div className="lobby-error" role="alert">
@@ -164,20 +179,19 @@ function Lobby() {
           <PlayerList
             sessions={sessions}
             currentUserId={currentUserId}
-            onChallenge={handleChallenge}
+            onChallenge={handleChallengeClick}
+            onCancelChallenge={handleCancelClick}
             challengeInFlight={challengeInFlight}
             pendingChallenges={pendingChallengesMap}
+            cancellingId={cancellingId}
           />
         </section>
         <section className="lobby-content__column lobby-content__column--challenges">
           <ChallengePanel
             incoming={incomingChallenges}
-            outgoing={outgoingChallenges}
-            onAccept={(challengeId) => void handleRespond(challengeId, 'accept')}
-            onDecline={(challengeId) => void handleRespond(challengeId, 'decline')}
-            onCancel={(challengeId) => void handleCancel(challengeId)}
+            onAccept={(challengeId) => void handleAcceptClick(challengeId)}
+            onDecline={handleDeclineClick}
             respondingTo={respondingTo}
-            cancellingId={cancellingId}
           />
         </section>
       </div>
@@ -203,7 +217,41 @@ function Lobby() {
           }
         }}
       />
-    </div>
+
+      {confirmChallenge && (
+        <ConfirmationModal
+          title="Challenge Player"
+          message={`Are you sure you want to challenge ${confirmChallenge.playerName}?`}
+          confirmText="Send Challenge"
+          cancelText="Cancel"
+          onConfirm={handleChallengeConfirm}
+          onCancel={() => setConfirmChallenge(null)}
+        />
+      )}
+
+      {confirmCancel && (
+        <ConfirmationModal
+          title="Cancel Challenge"
+          message={`Are you sure you want to cancel your challenge to ${confirmCancel.playerName}?`}
+          confirmText="Cancel Challenge"
+          cancelText="Keep Challenge"
+          onConfirm={handleCancelConfirm}
+          onCancel={() => setConfirmCancel(null)}
+        />
+      )}
+
+      {confirmDecline && (
+        <ConfirmationModal
+          title="Decline Challenge"
+          message={`Are you sure you want to decline the challenge from ${confirmDecline.playerName}?`}
+          confirmText="Decline Challenge"
+          cancelText="Keep Challenge"
+          onConfirm={handleDeclineConfirm}
+          onCancel={() => setConfirmDecline(null)}
+        />
+      )}
+      </div>
+    </>
   )
 }
 

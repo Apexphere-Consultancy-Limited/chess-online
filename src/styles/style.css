@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap');
+
 :root {
   --color-primary: #81b64c;
   --color-primary-dark: #6a9a3d;
@@ -13,6 +15,15 @@ html, body {
   padding: 0;
   overflow-x: hidden;
   width: 100%;
+  font-family: 'Nunito', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: inherit;
+  font-weight: 600;
+  letter-spacing: 0.015em;
 }
 
 #root {
@@ -47,10 +58,12 @@ body.game-page {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    min-height: 100vh;
+    height: 100vh;
     margin: 0;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    font-family: Arial, sans-serif;
+    font-family: 'Nunito', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-weight: 500;
+    overflow: hidden;
 }
 
 /* Game page: auto-hide top navbar */
@@ -103,8 +116,10 @@ body.game-page {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 30px;
-    padding: 20px;
+    gap: 15px;
+    padding: 10px;
+    max-height: 100vh;
+    overflow: hidden;
 }
 
 .turn-indicator {
@@ -138,12 +153,12 @@ body.game-page {
 
 .chess-board {
     display: grid;
-    grid-template-columns: repeat(8, 80px);
-    grid-template-rows: repeat(8, 80px);
+    grid-template-columns: repeat(8, 70px);
+    grid-template-rows: repeat(8, 70px);
     border: 3px solid #2c3e50;
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     background: #2c3e50;
-    padding: 10px;
+    padding: 8px;
     border-radius: 8px;
 }
 
@@ -168,8 +183,8 @@ body.game-page {
 }
 
 .square {
-    width: 80px;
-    height: 80px;
+    width: 70px;
+    height: 70px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -354,6 +369,19 @@ body.game-page {
     box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
 }
 
+.control-btn.icon-btn {
+    flex: 1;
+    min-width: 50px;
+    height: 50px;
+    padding: 0;
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    position: relative;
+}
+
 .control-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
@@ -364,6 +392,7 @@ body.game-page {
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+    opacity: 0.6;
 }
 
 .reset-btn {
@@ -478,30 +507,32 @@ body.game-page {
 
 .game-layout {
     display: grid;
-    grid-template-columns: 220px auto 320px;
-    grid-template-rows: auto auto auto;
-    column-gap: 40px;
-    row-gap: 20px;
+    grid-template-columns: 200px auto 280px;
+    grid-template-rows: auto;
+    column-gap: 20px;
+    row-gap: 15px;
     justify-content: center;
     align-items: start;
+    max-height: calc(100vh - 20px);
 }
 
 .left-side-panel {
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 1;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-width: 220px;
+    min-width: 200px;
     align-self: stretch;
 }
 
 .board-container {
     grid-column: 2;
-    grid-row: 2;
+    grid-row: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
 }
 
 .board-wrapper {
@@ -510,45 +541,45 @@ body.game-page {
 }
 
 .game-controls {
-    grid-column: 2;
-    grid-row: 3;
     display: flex;
-    gap: 20px;
+    flex-direction: row;
+    gap: 10px;
     justify-content: center;
-    margin-top: 20px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
 }
 
 .captured-pieces {
     background: rgba(255, 255, 255, 0.9);
-    border-radius: 15px;
-    padding: 25px;
+    border-radius: 12px;
+    padding: 6px;
     box-shadow: 0 6px 20px rgba(0,0,0,0.15);
     text-align: center;
 }
 
 .captured-pieces h3 {
-    margin: 0 0 15px 0;
+    margin: 0 0 4px 0;
     text-align: center;
     color: #2c3e50;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
 }
 
 .score-display {
-    margin-top: 15px;
-    padding-top: 15px;
+    margin-top: 4px;
+    padding-top: 4px;
     border-top: 2px solid #ecf0f1;
     text-align: center;
 }
 
 .score-display .player-name {
-    font-size: 16px;
+    font-size: 13px;
     color: #2c3e50;
-    margin-bottom: 5px;
+    margin-bottom: 2px;
 }
 
 .score-display .points {
-    font-size: 20px;
+    font-size: 15px;
     font-weight: bold;
     color: #34495e;
 }
@@ -556,22 +587,26 @@ body.game-page {
 .captured-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 2px;
     justify-content: center;
-    min-height: 50px;
+    min-height: 20px;
 }
 
 .captured-piece {
-    font-size: 30px;
-    padding: 5px;
+    font-size: 16px;
+    padding: 2px;
     background: rgba(52, 73, 94, 0.1);
     border-radius: 5px;
     animation: captureAppear 0.5s ease-out;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .captured-piece .piece-image {
-    width: 36px;
-    height: 36px;
+    width: 24px;
+    height: 24px;
+    display: block;
 }
 
 @keyframes captureAppear {
@@ -876,13 +911,14 @@ body.game-page {
 /* Move History Panel */
 .move-history-panel {
     background: rgba(255, 255, 255, 0.95);
-    border-radius: 15px;
-    padding: 20px;
+    border-radius: 12px;
+    padding: 15px;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-    max-height: 400px;
     display: flex;
     flex-direction: column;
     flex: 1;
+    overflow: hidden;
+    min-height: 0;
 }
 
 .history-title {
@@ -945,9 +981,9 @@ body.game-page {
 .move-entry {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    margin-bottom: 5px;
+    gap: 4px;
+    padding: 3px 5px;
+    margin-bottom: 2px;
     background: #f8f9fa;
     border-radius: 8px;
     transition: all 0.2s ease;
@@ -961,7 +997,7 @@ body.game-page {
 .move-number {
     font-weight: bold;
     color: #7f8c8d;
-    min-width: 30px;
+    min-width: 25px;
     font-size: 14px;
 }
 
@@ -969,15 +1005,15 @@ body.game-page {
     flex: 1;
     display: flex;
     align-items: center;
-    gap: 8px;
-    min-width: 120px;
+    gap: 4px;
+    min-width: 90px;
 }
 
 .move-item {
     flex: 1;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
 }
 
 .move-notation {
@@ -1016,29 +1052,30 @@ body.game-page {
 .timer {
     background: rgba(255, 255, 255, 0.9);
     border-radius: 12px;
-    padding: 15px 20px;
+    padding: 8px 12px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
     text-align: center;
-    min-width: 140px;
+    min-width: 100px;
     transition: all 0.3s ease;
     border: 3px solid transparent;
 }
 
 .timer.active {
-    border-color: #3498db;
-    box-shadow: 0 0 20px rgba(52, 152, 219, 0.5);
+    background: #fffacd;
+    border-color: #ffd700;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
 }
 
 .timer-label {
-    font-size: 14px;
+    font-size: 12px;
     font-weight: bold;
     color: #7f8c8d;
-    margin-bottom: 5px;
+    margin-bottom: 3px;
     text-transform: uppercase;
 }
 
 .timer-display {
-    font-size: 32px;
+    font-size: 24px;
     font-weight: bold;
     color: #2c3e50;
     font-family: 'Courier New', monospace;
@@ -1071,17 +1108,18 @@ body.game-page {
     display: flex;
     flex-direction: column;
     gap: 15px;
+    flex-shrink: 0;
 }
 
 .bot-chat-container {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 12px;
     background: rgba(255, 255, 255, 0.95);
-    border-radius: 15px;
-    padding: 20px;
+    border-radius: 12px;
+    padding: 15px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-    min-height: 200px;
+    flex-shrink: 0;
 }
 
 .bot-avatar {
@@ -1091,20 +1129,20 @@ body.game-page {
 }
 
 .bot-image-wrapper {
-    width: 100px;
-    height: 100px;
+    width: 70px;
+    height: 70px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
-    border: 4px solid white;
+    border: 3px solid white;
     animation: botFloat 3s ease-in-out infinite;
     flex-shrink: 0;
 }
 
 .bot-image {
-    font-size: 55px;
+    font-size: 40px;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
@@ -1192,12 +1230,29 @@ body.game-page {
 
 .right-side-panel {
     grid-column: 3;
-    grid-row: 2;
+    grid-row: 1;
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    width: 320px;
-    align-self: stretch;
+    gap: 15px;
+    width: 280px;
+    height: 580px;
+}
+
+.online-game-controls {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.forfeit-btn {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+}
+
+.forfeit-btn:hover:not(:disabled) {
+    box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
 }
 /* Learning Mode Styles */
 .learning-mode-container {

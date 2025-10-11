@@ -18,6 +18,15 @@ function Game() {
   const { gameId } = useParams<{ gameId: string }>()
   const { user, loading } = useAuth()
 
+  // Apply game-page class for all games
+  useEffect(() => {
+    document.body.classList.add('game-page')
+    return () => {
+      document.body.classList.remove('game-page')
+    }
+  }, [])
+
+  // Handle online game
   if (gameId) {
     if (loading) {
       return (
@@ -28,7 +37,7 @@ function Game() {
     }
 
     if (!user) {
-      const redirectTo = encodeURIComponent(`/game/${gameId}`)
+      const redirectTo = encodeURIComponent(`/online/${gameId}`)
       return <Navigate to={`/login?redirect=${redirectTo}`} replace />
     }
 
@@ -36,21 +45,23 @@ function Game() {
   }
 
   // Otherwise, render local game (vs Friend or vs AI)
+  return <LocalGame />
+}
+
+function LocalGame() {
   const [showNavbar, setShowNavbar] = useState(true)
 
   useEffect(() => {
-    document.body.classList.add('game-page')
-
     // Auto-hide navbar after 3 seconds
     const timer = setTimeout(() => {
       setShowNavbar(false)
     }, 3000)
 
     return () => {
-      document.body.classList.remove('game-page')
       clearTimeout(timer)
     }
   }, [])
+
   const {
     boardState,
     currentPlayer,
@@ -98,6 +109,7 @@ function Game() {
             setGameMode(mode)
             setShowModal(false)
           }}
+          onClose={() => setShowModal(false)}
         />
       )}
 
@@ -118,18 +130,6 @@ function Game() {
 
       <div className="game-container">
         <div className="game-layout">
-          {/* Turn Indicator */}
-          <div className={`turn-indicator ${currentPlayer}-turn`} id="turnIndicator">
-            {isComputerThinking ? (
-              "Computer is thinking..."
-            ) : (
-              <>
-                {inCheck && <span style={{ color: 'red', fontWeight: 'bold' }}>CHECK! </span>}
-                {currentPlayer === 'white' ? "White's Turn!" : "Black's Turn!"}
-              </>
-            )}
-          </div>
-
           {/* Left Side: Captured Pieces */}
           <div className="left-side-panel">
             <CapturedPieces
@@ -194,16 +194,16 @@ function Game() {
             <div className="move-history-panel">
               <MoveHistory moves={moveHistory} />
             </div>
-          </div>
 
-          {/* Bottom Row: Game Controls */}
-          <GameControls
-            onUndo={handleUndo}
-            onHint={handleHint}
-            onReset={handleReset}
-            canUndo={moveHistory.length > 0}
-            gameMode={gameMode}
-          />
+            {/* Game Controls under Move History */}
+            <GameControls
+              onUndo={handleUndo}
+              onHint={handleHint}
+              onReset={handleReset}
+              canUndo={moveHistory.length > 0}
+              gameMode={gameMode}
+            />
+          </div>
         </div>
       </div>
     </>

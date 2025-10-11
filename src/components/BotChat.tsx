@@ -1,27 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { GameMode } from '../types/chess'
-import easyBotIdle1 from '../resources/easy-bot/easy-bot-idle-1.gif'
-import easyBotIdle2 from '../resources/easy-bot/easy-bot-idle-2.gif'
-import easyBotCelebrate from '../resources/easy-bot/easy-bot-celebrate.gif'
-import easyBotCapture from '../resources/easy-bot/easy-bot-capture-piece.gif'
-import easyBotLost from '../resources/easy-bot/easy-bot-lost-piece.gif'
-import easyBotCheck from '../resources/easy-bot/easy-bot-check.gif'
-import easyBotScared from '../resources/easy-bot/easy-bot-scared.gif'
-import easyBotThinking from '../resources/easy-bot/easy-bot-thinking.gif'
-import mediumBotIdle from '../resources/medium-bot/medium-bot-idle.gif'
-import mediumBotWin from '../resources/medium-bot/medium-bot-win.gif'
-import mediumBotCapture from '../resources/medium-bot/medium-bot-capture-piece.gif'
-import mediumBotLostPiece from '../resources/medium-bot/medium-bot-lost-piece.gif'
-import mediumBotScared from '../resources/medium-bot/medium-bot-scared.gif'
-import mediumBotCheck from '../resources/medium-bot/medium-bot-check.gif'
-import mediumBotLostGame from '../resources/medium-bot/medium-bot-lost-game.gif'
-import mediumBotThinking from '../resources/medium-bot/medium-bot-thinking.gif'
-import hardBotIdle from '../resources/hard-bot/hard-bot-idle-1.gif'
-import hardBotCelebrate from '../resources/hard-bot/hard-bot-celebrate.gif'
-import hardBotCapture from '../resources/hard-bot/hard-bot-capture-piece.gif'
-import hardBotLostPiece from '../resources/hard-bot/hard-bot-lost-piece.gif'
-import hardBotCheck from '../resources/hard-bot/hard-bot-check.gif'
-import hardBotThinking from '../resources/hard-bot/hard-bot-thinking.gif'
+import { BOT_ANIMATIONS } from '../constants/botAnimations'
 
 interface BotChatProps {
   moveCount: number
@@ -65,13 +44,13 @@ const BOT_PROFILES: Record<string, BotProfile> = {
   'ai-easy': {
     name: 'Botley',
     avatar: {
-      idle: easyBotIdle1,
-      celebrate: easyBotCelebrate,
-      capture: easyBotCapture,
-      lostPiece: easyBotLost,
-      check: easyBotCheck,
-      scared: easyBotScared,
-      thinking: easyBotThinking
+      idle: BOT_ANIMATIONS.easy.idle,
+      celebrate: BOT_ANIMATIONS.easy.celebrate,
+      capture: BOT_ANIMATIONS.easy.capturePiece,
+      lostPiece: BOT_ANIMATIONS.easy.lostPiece,
+      check: BOT_ANIMATIONS.easy.check,
+      scared: BOT_ANIMATIONS.easy.scared,
+      thinking: BOT_ANIMATIONS.easy.thinking
     },
     avatarType: 'image',
     avatarBg: 'linear-gradient(135deg, #A8E6CF 0%, #56CCF2 100%)',
@@ -105,14 +84,14 @@ const BOT_PROFILES: Record<string, BotProfile> = {
   'ai-medium': {
     name: 'Chill Cat',
     avatar: {
-      idle: mediumBotIdle,
-      celebrate: mediumBotWin,
-      capture: mediumBotCapture,
-      lostPiece: mediumBotLostPiece,
-      check: mediumBotCheck,
-      scared: mediumBotScared,
-      thinking: mediumBotThinking,
-      lostGame: mediumBotLostGame
+      idle: BOT_ANIMATIONS.medium.idle,
+      celebrate: BOT_ANIMATIONS.medium.win,
+      capture: BOT_ANIMATIONS.medium.capturePiece,
+      lostPiece: BOT_ANIMATIONS.medium.lostPiece,
+      check: BOT_ANIMATIONS.medium.check,
+      scared: BOT_ANIMATIONS.medium.scared,
+      thinking: BOT_ANIMATIONS.medium.thinking,
+      lostGame: BOT_ANIMATIONS.medium.lostGame
     },
     avatarType: 'image',
     avatarBg: 'linear-gradient(135deg, #6A0572 0%, #AB47BC 100%)',
@@ -146,13 +125,13 @@ const BOT_PROFILES: Record<string, BotProfile> = {
   'ai-hard': {
     name: 'Blaze Master',
     avatar: {
-      idle: hardBotIdle,
-      celebrate: hardBotCelebrate,
-      capture: hardBotCapture,
-      lostPiece: hardBotLostPiece,
-      check: hardBotCheck,
-      scared: hardBotLostPiece,
-      thinking: hardBotThinking
+      idle: BOT_ANIMATIONS.hard.idle,
+      celebrate: BOT_ANIMATIONS.hard.celebrate,
+      capture: BOT_ANIMATIONS.hard.capturePiece,
+      lostPiece: BOT_ANIMATIONS.hard.lostPiece,
+      check: BOT_ANIMATIONS.hard.check,
+      scared: BOT_ANIMATIONS.hard.lostPiece,
+      thinking: BOT_ANIMATIONS.hard.thinking
     },
     avatarType: 'image',
     avatarBg: 'linear-gradient(135deg, #FF6B35 0%, #F7931E 100%)',

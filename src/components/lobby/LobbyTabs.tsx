@@ -4,7 +4,6 @@ interface LobbyTabsProps {
   lobbies: Lobby[]
   activeLobbyId?: string
   onSelect: (slug: string) => void
-  disabled?: boolean
 }
 
 function formatRange(min: number | null, max: number | null) {
@@ -14,7 +13,7 @@ function formatRange(min: number | null, max: number | null) {
   return `≤ ${max}`
 }
 
-function LobbyTabs({ lobbies, activeLobbyId, onSelect, disabled }: LobbyTabsProps) {
+function LobbyTabs({ lobbies, activeLobbyId, onSelect }: LobbyTabsProps) {
   return (
     <div className="lobby-tabs" role="tablist" aria-label="Lobby selection">
       {lobbies.map((lobby) => {
@@ -27,7 +26,7 @@ function LobbyTabs({ lobbies, activeLobbyId, onSelect, disabled }: LobbyTabsProp
             className={`lobby-tab${isActive ? ' lobby-tab--active' : ''}`}
             aria-selected={isActive}
             onClick={() => onSelect(lobby.slug)}
-            disabled={disabled || isActive}
+            disabled={isActive}
           >
             <span className="lobby-tab__title">{lobby.title}</span>
             <span className="lobby-tab__meta">{formatRange(lobby.min_elo, lobby.max_elo)}</span>

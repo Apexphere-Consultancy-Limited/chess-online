@@ -13,7 +13,7 @@ function CapturedPieces({ color, capturedPieces, score }: CapturedPiecesProps) {
 
   return (
     <div className="captured-pieces">
-      <h3>{oppositeColor}'s Captured Pieces</h3>
+      <h3>{oppositeColor}'s Captured</h3>
       <div className="captured-list">
         {capturedPieces.map((piece, index) => (
           <span key={index} className="captured-piece">
