@@ -1,14 +1,16 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Chess } from 'chess.js'
+import { Flag } from 'lucide-react'
 import { supabase, Game as GameType } from '../lib/supabaseClient'
 import { useAuth } from '../auth/AuthProvider'
 import { useGameRealtime, RealtimeMovePayload } from '../hooks/useGameRealtime'
 import { makeMove } from '../hooks/useMakeMove'
 import ChessBoard from './ChessBoard'
 import NavBar from './NavBar'
+import MoveHistory from './MoveHistory'
 import { PIECES } from '../types/chess'
-import type { BoardState, PieceSymbol, PieceType } from '../types/chess'
+import type { BoardState, PieceSymbol, PieceType, Move } from '../types/chess'
 
 const TYPE_MAP: Record<string, PieceType> = {
   p: 'pawn',
@@ -36,6 +38,19 @@ export default function OnlineGame() {
   const [validMoves, setValidMoves] = useState<{ row: number; col: number }[]>([])
   const [error, setError] = useState<string | null>(null)
   const lastProcessedFenRef = useRef<string | null>(null)
+  const [showNavbar, setShowNavbar] = useState(true)
+  const [moveHistory, setMoveHistory] = useState<Move[]>([])
+
+  // Auto-hide navbar after 3 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowNavbar(false)
+    }, 3000)
+
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [])
 
   // Load game data
   useEffect(() => {
@@ -144,6 +159,19 @@ export default function OnlineGame() {
       newBoardState.push(boardRow)
     }
     setBoardState(newBoardState)
+
+    // Update move history
+    const history = chess.history({ verbose: true })
+    const formattedMoves: Move[] = history.map((move) => {
+      const piece = PIECES[move.color === 'w' ? 'white' : 'black'][TYPE_MAP[move.piece]]
+      return {
+        piece,
+        notation: move.san,
+        from: move.from,
+        to: move.to,
+      }
+    })
+    setMoveHistory(formattedMoves)
   }
 
   async function handleSquareClick(row: number, col: number) {
@@ -235,6 +263,37 @@ export default function OnlineGame() {
     }
   }
 
+  async function handleForfeit() {
+    if (!game || !user || !gameId) return
+
+    const confirmed = window.confirm('Are you sure you want to forfeit this game?')
+    if (!confirmed) return
+
+    try {
+      const winner = playerColor === 'white' ? 'black' : 'white'
+      await supabase
+        .from('games')
+        .update({
+          status: 'completed',
+          result: `${winner} wins by forfeit`,
+          winner: winner,
+        })
+        .eq('id', gameId)
+
+      // Refresh game data
+      const { data } = await supabase
+        .from('games')
+        .select('*')
+        .eq('id', gameId)
+        .single()
+
+      if (data) setGame(data)
+    } catch (err) {
+      console.error('Failed to forfeit:', err)
+      setError('Failed to forfeit game')
+    }
+  }
+
   if (error) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
@@ -251,7 +310,7 @@ export default function OnlineGame() {
 
   return (
     <>
-      <div className="game-top-nav show">
+      <div className={`game-top-nav ${showNavbar ? 'show' : ''}`}>
         <NavBar />
       </div>
 
@@ -277,12 +336,32 @@ export default function OnlineGame() {
                 selectedSquare={selectedSquare}
                 validMoves={validMoves}
                 draggedPiece={null}
+                lastMove={null}
+                hintSquares={[]}
                 onSquareClick={handleSquareClick}
                 onDragStart={() => {}}
                 onDragOver={() => {}}
                 onDrop={() => {}}
                 onDragEnd={() => {}}
               />
+            </div>
+          </div>
+
+          {/* Right Side: Move History and Controls */}
+          <div className="right-side-panel">
+            <div className="move-history-panel">
+              <MoveHistory moves={moveHistory} />
+            </div>
+
+            <div className="online-game-controls">
+              <button
+                className="control-btn forfeit-btn icon-btn"
+                onClick={handleForfeit}
+                disabled={game.status === 'completed'}
+                title="Forfeit Game"
+              >
+                <Flag size={20} />
+              </button>
             </div>
           </div>
         </div>
