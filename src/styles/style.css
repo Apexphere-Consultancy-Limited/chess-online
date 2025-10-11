@@ -529,34 +529,34 @@ body.game-page {
 .captured-pieces {
     background: rgba(255, 255, 255, 0.9);
     border-radius: 12px;
-    padding: 15px;
+    padding: 6px;
     box-shadow: 0 6px 20px rgba(0,0,0,0.15);
     text-align: center;
 }
 
 .captured-pieces h3 {
-    margin: 0 0 15px 0;
+    margin: 0 0 4px 0;
     text-align: center;
     color: #2c3e50;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
 }
 
 .score-display {
-    margin-top: 15px;
-    padding-top: 15px;
+    margin-top: 4px;
+    padding-top: 4px;
     border-top: 2px solid #ecf0f1;
     text-align: center;
 }
 
 .score-display .player-name {
-    font-size: 16px;
+    font-size: 13px;
     color: #2c3e50;
-    margin-bottom: 5px;
+    margin-bottom: 2px;
 }
 
 .score-display .points {
-    font-size: 20px;
+    font-size: 15px;
     font-weight: bold;
     color: #34495e;
 }
@@ -564,22 +564,26 @@ body.game-page {
 .captured-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 2px;
     justify-content: center;
-    min-height: 50px;
+    min-height: 20px;
 }
 
 .captured-piece {
-    font-size: 30px;
-    padding: 5px;
+    font-size: 16px;
+    padding: 2px;
     background: rgba(52, 73, 94, 0.1);
     border-radius: 5px;
     animation: captureAppear 0.5s ease-out;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .captured-piece .piece-image {
-    width: 36px;
-    height: 36px;
+    width: 24px;
+    height: 24px;
+    display: block;
 }
 
 @keyframes captureAppear {
@@ -954,9 +958,9 @@ body.game-page {
 .move-entry {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    margin-bottom: 5px;
+    gap: 4px;
+    padding: 3px 5px;
+    margin-bottom: 2px;
     background: #f8f9fa;
     border-radius: 8px;
     transition: all 0.2s ease;
@@ -970,7 +974,7 @@ body.game-page {
 .move-number {
     font-weight: bold;
     color: #7f8c8d;
-    min-width: 30px;
+    min-width: 25px;
     font-size: 14px;
 }
 
@@ -978,15 +982,15 @@ body.game-page {
     flex: 1;
     display: flex;
     align-items: center;
-    gap: 8px;
-    min-width: 120px;
+    gap: 4px;
+    min-width: 90px;
 }
 
 .move-item {
     flex: 1;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
 }
 
 .move-notation {
@@ -1025,29 +1029,30 @@ body.game-page {
 .timer {
     background: rgba(255, 255, 255, 0.9);
     border-radius: 12px;
-    padding: 15px 20px;
+    padding: 8px 12px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
     text-align: center;
-    min-width: 140px;
+    min-width: 100px;
     transition: all 0.3s ease;
     border: 3px solid transparent;
 }
 
 .timer.active {
-    border-color: #3498db;
-    box-shadow: 0 0 20px rgba(52, 152, 219, 0.5);
+    background: #fffacd;
+    border-color: #ffd700;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
 }
 
 .timer-label {
-    font-size: 14px;
+    font-size: 12px;
     font-weight: bold;
     color: #7f8c8d;
-    margin-bottom: 5px;
+    margin-bottom: 3px;
     text-transform: uppercase;
 }
 
 .timer-display {
-    font-size: 32px;
+    font-size: 24px;
     font-weight: bold;
     color: #2c3e50;
     font-family: 'Courier New', monospace;

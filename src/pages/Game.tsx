@@ -109,6 +109,7 @@ function LocalGame() {
             setGameMode(mode)
             setShowModal(false)
           }}
+          onClose={() => setShowModal(false)}
         />
       )}
 
