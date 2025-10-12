@@ -14,9 +14,9 @@ import { PIECES, PIECE_VALUES } from '../types/chess'
 import type { BoardState, PieceSymbol, PieceType, Move, PieceColor } from '../types/chess'
 
 /**
- * UnifiedChessGame Component
+ * ChessGame Component
  *
- * A single chess game component that works for ALL game modes:
+ * The single chess game component that works for ALL game modes:
  * - Online multiplayer (vs human over network)
  * - Local vs Bot (easy/medium/hard AI)
  * - Local vs Friend (local multiplayer)
@@ -26,7 +26,7 @@ import type { BoardState, PieceSymbol, PieceType, Move, PieceColor } from '../ty
  * - Opponent: ONLY handles communication (sendMove/onOpponentMove)
  */
 
-interface UnifiedChessGameProps {
+interface ChessGameProps {
   opponent: GameOpponent
   playerColor?: 'white' | 'black' // For online games, which color am I?
   gameMode?: 'friend' | 'ai-easy' | 'ai-medium' | 'ai-hard' // For offline games
@@ -41,7 +41,7 @@ const TYPE_MAP: Record<string, PieceType> = {
   k: 'king',
 }
 
-export default function UnifiedChessGame({ opponent, playerColor = 'white', gameMode = 'friend' }: UnifiedChessGameProps) {
+export default function ChessGame({ opponent, playerColor = 'white', gameMode = 'friend' }: ChessGameProps) {
   // Chess.js instance (owns game rules)
   const [chess] = useState(() => new Chess())
 
