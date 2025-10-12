@@ -28,10 +28,14 @@ function ChessBoard({
   onDrop,
   onDragEnd
 }: ChessBoardProps) {
+  const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
+  const ranks = ['8', '7', '6', '5', '4', '3', '2', '1']
+
   return (
-    <div className="chess-board" id="board">
-      {boardState.map((row, rowIndex) =>
-        row.map((piece, colIndex) => {
+    <div className="chess-board-wrapper">
+      <div className="chess-board" id="board">
+        {boardState.map((row, rowIndex) =>
+          row.map((piece, colIndex) => {
           const isLight = (rowIndex + colIndex) % 2 === 0
           const isSelected =
             selectedSquare !== null &&
@@ -64,27 +68,37 @@ function ChessBoard({
           }
 
           return (
-            <Square
-              key={`${rowIndex}-${colIndex}`}
-              row={rowIndex}
-              col={colIndex}
-              piece={piece}
-              isLight={isLight}
-              isSelected={isSelected}
-              isValidMove={isValidMove}
-              isDragging={isDragging}
-              isLastMoveFrom={isLastMoveFrom}
-              isLastMoveTo={isLastMoveTo}
-              hintRank={hintRank}
-              onClick={onSquareClick}
-              onDragStart={onDragStart}
-              onDragOver={onDragOver}
-              onDrop={onDrop}
-              onDragEnd={onDragEnd}
-            />
+            <div key={`${rowIndex}-${colIndex}`} className="square-wrapper">
+              <Square
+                row={rowIndex}
+                col={colIndex}
+                piece={piece}
+                isLight={isLight}
+                isSelected={isSelected}
+                isValidMove={isValidMove}
+                isDragging={isDragging}
+                isLastMoveFrom={isLastMoveFrom}
+                isLastMoveTo={isLastMoveTo}
+                hintRank={hintRank}
+                onClick={onSquareClick}
+                onDragStart={onDragStart}
+                onDragOver={onDragOver}
+                onDrop={onDrop}
+                onDragEnd={onDragEnd}
+              />
+              {/* Show file letter on bottom row */}
+              {rowIndex === 7 && (
+                <div className="coordinate-file">{files[colIndex]}</div>
+              )}
+              {/* Show rank number on left column */}
+              {colIndex === 0 && (
+                <div className="coordinate-rank">{ranks[rowIndex]}</div>
+              )}
+            </div>
           )
         })
       )}
+      </div>
     </div>
   )
 }

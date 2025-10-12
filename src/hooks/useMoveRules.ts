@@ -15,6 +15,7 @@ import {
 } from '../utils/chess'
 import { useGameBoard } from './useGameBoard'
 import { useComputerAI } from './useComputerAI'
+import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound } from '../utils/soundEffects'
 
 export function useMoveRules() {
   // Use modular hooks
@@ -188,10 +189,21 @@ export function useMoveRules() {
 
       // Check for checkmate or stalemate after the move
       setTimeout(() => {
-        if (isCheckmate(nextPlayer, newBoard, enPassantTarget)) {
+        const isCheckMate = isCheckmate(nextPlayer, newBoard, enPassantTarget)
+        const isCheck = isInCheck(nextPlayer, newBoard)
+
+        // Play appropriate sound effect
+        if (isCheckMate) {
+          playCheckmateSound()
           setGameOver({ winner: currentPlayer, reason: 'checkmate' })
         } else if (isStalemate(nextPlayer, newBoard, enPassantTarget)) {
           setGameOver({ winner: 'draw', reason: 'stalemate' })
+        } else if (isCheck) {
+          playCheckSound()
+        } else if (capturedPiece) {
+          playCaptureSound()
+        } else {
+          playMoveSound()
         }
       }, 0)
 

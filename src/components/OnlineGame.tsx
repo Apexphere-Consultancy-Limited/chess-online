@@ -11,6 +11,7 @@ import NavBar from './NavBar'
 import MoveHistory from './MoveHistory'
 import { PIECES } from '../types/chess'
 import type { BoardState, PieceSymbol, PieceType, Move } from '../types/chess'
+import { initializeSounds } from '../utils/soundEffects'
 
 const TYPE_MAP: Record<string, PieceType> = {
   p: 'pawn',
@@ -41,8 +42,11 @@ export default function OnlineGame() {
   const [showNavbar, setShowNavbar] = useState(true)
   const [moveHistory, setMoveHistory] = useState<Move[]>([])
 
-  // Auto-hide navbar after 3 seconds
+  // Auto-hide navbar after 3 seconds and initialize sounds
   useEffect(() => {
+    // Initialize sounds when game starts
+    initializeSounds()
+
     const timer = setTimeout(() => {
       setShowNavbar(false)
     }, 3000)
