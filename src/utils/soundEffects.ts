@@ -1,9 +1,9 @@
 // Chess sound effects using extracted audio files
 // Uses individual 1-second sound files for instant playback
 
-import moveSound from '../resources/sounds/move.mp3'
-import captureSound from '../resources/sounds/capture.mp3'
-import checkSound from '../resources/sounds/check.mp3'
+const moveSound = '/assets/sounds/move.mp3'
+const captureSound = '/assets/sounds/capture.mp3'
+const checkSound = '/assets/sounds/check.mp3'
 
 let audioContext: AudioContext | null = null
 let moveAudioBuffer: AudioBuffer | null = null
@@ -178,94 +178,3 @@ export const playCheckmateSound = () => {
   }
 }
 
-// Fallback generated sounds (in case audio files don't load)
-const playGeneratedMoveSound = () => {
-  try {
-    const ctx = getAudioContext()
-    const now = ctx.currentTime
-
-    const osc = ctx.createOscillator()
-    const oscGain = ctx.createGain()
-
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(220, now)
-    osc.frequency.exponentialRampToValueAtTime(100, now + 0.05)
-
-    oscGain.gain.setValueAtTime(0.3, now)
-    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08)
-
-    osc.connect(oscGain)
-    oscGain.connect(ctx.destination)
-
-    osc.start(now)
-    osc.stop(now + 0.08)
-  } catch (error) {
-    console.warn('Could not play generated move sound:', error)
-  }
-}
-
-const playGeneratedCaptureSound = () => {
-  try {
-    const ctx = getAudioContext()
-    const now = ctx.currentTime
-
-    const osc = ctx.createOscillator()
-    const oscGain = ctx.createGain()
-
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(200, now)
-    osc.frequency.exponentialRampToValueAtTime(80, now + 0.06)
-
-    oscGain.gain.setValueAtTime(0.35, now)
-    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1)
-
-    osc.connect(oscGain)
-    oscGain.connect(ctx.destination)
-
-    osc.start(now)
-    osc.stop(now + 0.1)
-  } catch (error) {
-    console.warn('Could not play generated capture sound:', error)
-  }
-}
-
-const playGeneratedCheckSound = () => {
-  try {
-    const ctx = getAudioContext()
-    const now = ctx.currentTime
-
-    // First tone
-    const osc1 = ctx.createOscillator()
-    const gain1 = ctx.createGain()
-
-    osc1.type = 'sine'
-    osc1.frequency.value = 880
-
-    gain1.gain.setValueAtTime(0.2, now)
-    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.12)
-
-    osc1.connect(gain1)
-    gain1.connect(ctx.destination)
-
-    osc1.start(now)
-    osc1.stop(now + 0.12)
-
-    // Second tone
-    const osc2 = ctx.createOscillator()
-    const gain2 = ctx.createGain()
-
-    osc2.type = 'sine'
-    osc2.frequency.value = 1760
-
-    gain2.gain.setValueAtTime(0.12, now + 0.06)
-    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.15)
-
-    osc2.connect(gain2)
-    gain2.connect(ctx.destination)
-
-    osc2.start(now + 0.06)
-    osc2.stop(now + 0.15)
-  } catch (error) {
-    console.warn('Could not play generated check sound:', error)
-  }
-}
