@@ -13,6 +13,7 @@ import { useMoveRules } from '../hooks/useMoveRules'
 import NavBar from '../components/NavBar'
 import OnlineGame from '../components/OnlineGame'
 import { useAuth } from '../auth/AuthProvider'
+import { initializeSounds } from '../utils/soundEffects'
 
 function Game() {
   const { gameId } = useParams<{ gameId: string }>()
@@ -52,6 +53,9 @@ function LocalGame() {
   const [showNavbar, setShowNavbar] = useState(true)
 
   useEffect(() => {
+    // Initialize sounds when game starts
+    initializeSounds()
+
     // Auto-hide navbar after 3 seconds
     const timer = setTimeout(() => {
       setShowNavbar(false)
