@@ -151,6 +151,11 @@ body.game-page {
     color: #2c3e50;
 }
 
+.chess-board-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
 .chess-board {
     display: grid;
     grid-template-columns: repeat(8, 70px);
@@ -160,6 +165,34 @@ body.game-page {
     background: #2c3e50;
     padding: 8px;
     border-radius: 8px;
+}
+
+.square-wrapper {
+    position: relative;
+}
+
+.coordinate-file {
+    position: absolute;
+    bottom: 2px;
+    right: 4px;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: bold;
+    font-size: 14px;
+    user-select: none;
+    pointer-events: none;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.coordinate-rank {
+    position: absolute;
+    top: 2px;
+    left: 4px;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: bold;
+    font-size: 14px;
+    user-select: none;
+    pointer-events: none;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .board-coordinates {
