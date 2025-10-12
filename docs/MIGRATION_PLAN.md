@@ -8,6 +8,60 @@
 
 **Timeline**: 4 phases, incrementally building features while maintaining stability.
 
+### The Core Principle: Separation of Concerns
+
+**Game ≠ Opponent**
+
+This refactoring is fundamentally about separating two distinct responsibilities:
+
+```
+┌─────────────────────────────────┐
+│         GAME COMPONENT          │
+│                                 │
+│  Owns EVERYTHING about the game:│
+│  • Chess rules (chess.js)       │
+│  • Board state                  │
+│  • Sound effects                │
+│  • UI rendering                 │
+│  • Move validation              │
+│  • Game end detection           │
+│  • Captured pieces              │
+│  • Move history                 │
+│  • Timers                       │
+└────────────┬────────────────────┘
+             │
+             │ uses
+             │
+             ▼
+┌─────────────────────────────────┐
+│      OPPONENT ABSTRACTION       │
+│                                 │
+│  ONLY handles communication:    │
+│  • sendMove(from, to)           │
+│  • onOpponentMove(callback)     │
+│  • That's it!                   │
+│                                 │
+│  NO game logic                  │
+│  NO board state                 │
+│  NO validation                  │
+│  NO sounds                      │
+└─────────────────────────────────┘
+```
+
+**Why This Matters:**
+
+Before this refactoring, responsibilities were confused:
+- ❌ Opponent was handling game state
+- ❌ Opponent was triggering sounds
+- ❌ Opponent was managing game completion
+- ❌ Game logic was spread across game and opponent
+
+After this refactoring, responsibilities are clear:
+- ✅ Game owns ALL game logic
+- ✅ Opponent ONLY passes messages
+- ✅ Clean separation = easier to reason about
+- ✅ Either opponent type (online/bot/friend) works the same way
+
 ---
 
 ## Current Architecture Analysis
@@ -105,43 +159,69 @@
 
 ---
 
-### Phase 1: Create Abstraction Layer
-**Goal**: Build the opponent abstraction without breaking existing code
+### Phase 1: Create Abstraction Layer ✅ COMPLETED
+**Goal**: Build the opponent abstraction focused ONLY on communication
 
-**Duration**: 2-3 hours
+**Duration**: Completed
 
-#### Tasks:
+**Key Learning**: Opponent should NOT handle game logic - only message passing!
 
-1. **Create `types/gameOpponent.ts`**
+#### What We Built:
+
+1. **`types/gameOpponent.ts`** - Super simple interface
    ```typescript
+   interface OpponentMove {
+     from: string        // Just "e2"
+     to: string          // Just "e4"
+     promotion?: string  // Just "q"
+     // NO FEN, NO board state, NO game data!
+   }
+
    interface GameOpponent {
-     sendMove: (move: ChessMove) => Promise<void>
-     onOpponentMove: (callback: (move: ChessMove) => void) => () => void
-     onGameEnd: (callback: (result: GameResult) => void) => () => void
+     // Send my move to opponent
+     sendMove: (move: OpponentMove) => Promise<void>
+
+     // Listen for opponent's move
+     onOpponentMove: (callback: (move: OpponentMove) => void) => () => void
+
+     // Cleanup
      disconnect: () => void
+
+     // UI flag (show forfeit vs undo/hints)
      isOnline: boolean
    }
    ```
 
-2. **Create `hooks/useSupabaseOpponent.ts`**
-   - Wrap existing realtime channel logic
-   - Implement `GameOpponent` interface
-   - Handle move broadcasting
-   - Handle game state sync
+2. **`hooks/useSupabaseOpponent.ts`** - Online communication
+   - Sends move to server via `makeMove()`
+   - Broadcasts move via realtime channel
+   - Receives opponent's move from channel
+   - **Does NOT**: Validate, update board, play sounds, manage game state
 
-3. **Create `hooks/useLocalOpponent.ts`**
-   - Implement `GameOpponent` interface
-   - For "vs Friend": Just echo back (no AI)
-   - For "vs Bot": Integrate existing AI from `useComputerAI`
-   - Add configurable delay to mimic network latency (200-500ms)
+3. **`hooks/useLocalOpponent.ts`** - Local communication
+   - Bot mode: Triggers AI calculation (easy/medium/hard)
+   - Friend mode: No-op (both players local)
+   - Artificial delay (200-500ms) for natural feel
+   - **Does NOT**: Apply moves, validate, update board, play sounds
 
-4. **Test both implementations** side-by-side with existing code
+**Key Principle Established**:
+```
+Game Component:
+├── Owns: Rules, board, sounds, UI, validation, timers
+└── Uses: opponent.sendMove() and opponent.onOpponentMove()
+
+Opponent Hook:
+├── Owns: Message passing ONLY
+└── Does NOT: Touch game state, sounds, validation, board
+```
 
 **Deliverables**:
-- ✅ `GameOpponent` interface defined
-- ✅ `useSupabaseOpponent` working with existing online game
-- ✅ `useLocalOpponent` working with AI
-- ✅ No regressions in existing functionality
+- ✅ Clean `GameOpponent` interface (communication only)
+- ✅ `useSupabaseOpponent` (thin wrapper around existing Supabase calls)
+- ✅ `useLocalOpponent` (bot AI + artificial delay)
+- ✅ Zero existing code modified
+- ✅ Build succeeds
+- ✅ Clear separation of concerns
 
 ---
 
@@ -438,19 +518,112 @@ src/
 
 ---
 
+## Why This Refactoring Matters
+
+### The Problem We're Solving
+
+**Current State** (Duplication + Confusion):
+```
+OnlineGame.tsx (450 lines)
+├── Chess rules (chess.js)
+├── Board state
+├── Sound effects
+├── UI rendering
+├── Move validation
+├── Network communication (Supabase)
+└── All mixed together!
+
+useMoveRules.ts (435 lines)
+├── Chess rules (custom)
+├── Board state
+├── Sound effects
+├── Move validation
+├── Bot AI integration
+└── All mixed together!
+
+Result: Can't reuse anything, duplicate bugs, confusing responsibilities
+```
+
+**After Refactoring** (Clean + Reusable):
+```
+UnifiedChessGame (single component)
+├── Chess rules (chess.js)
+├── Board state
+├── Sound effects
+├── UI rendering
+├── Move validation
+└── Uses: opponent.sendMove() / opponent.onOpponentMove()
+    │
+    ├── Online: useSupabaseOpponent (network communication)
+    ├── Bot: useLocalOpponent (AI calculation)
+    └── Friend: useLocalOpponent (no-op)
+
+Result: Write once, works everywhere, clear responsibilities
+```
+
+### Key Benefits
+
+1. **Single Source of Truth for Game Logic**
+   - One place for chess rules
+   - One place for sounds
+   - One place for validation
+   - Fix a bug once, fixed everywhere
+
+2. **Clear Separation of Concerns**
+   - Game = "What happens in chess?"
+   - Opponent = "How do I communicate with the other player?"
+   - No more "where does this logic belong?"
+
+3. **Easy to Add Features**
+   - Want to add animations? Add to Game component, works for all modes
+   - Want to add new bot difficulty? Just add new OpponentConfig
+   - Want to add spectator mode? Just another opponent type!
+
+4. **Better Testing**
+   - Test Game component with mock opponent
+   - Test Opponent implementations independently
+   - Clear boundaries = easier to test
+
+5. **Future Extensions**
+   - Add puzzle mode: Same Game component, puzzle opponent
+   - Add analysis mode: Same Game component, no opponent
+   - Add online bot challenges: Combine online + bot opponent
+   - Add replay mode: Same Game component, replay opponent
+
+### What Makes This Different from Other Refactorings
+
+Most refactorings just move code around. **This refactoring clarifies concepts.**
+
+Before: "Is the opponent part of the game?"
+After: "No! The opponent is WHO you're playing. The game is WHAT you're playing."
+
+This mental model makes everything clearer:
+- Game rules don't change based on opponent
+- Sounds don't change based on opponent
+- Board doesn't change based on opponent
+- Only communication channel changes!
+
+---
+
 ## Next Steps
 
-1. **Review this plan** - Discuss any concerns or suggestions
-2. **Start Phase 1** - Create opponent abstractions
+1. ✅ **Phase 1 Complete** - Opponent abstraction created
+2. **Phase 2 Next** - Create UnifiedChessGame component
 3. **Incremental commits** - Small, testable changes
 4. **Continuous testing** - Verify no regressions
 5. **Documentation** - Update as we go
 
-**Estimated Total Time**: 8-12 hours of focused development
+**Estimated Remaining Time**: 6-9 hours (Phases 2-4)
 
-**Benefits**:
+**Benefits Already Achieved**:
+- ✅ Clear separation of Game vs Opponent
+- ✅ Simple, focused interface (3 methods)
+- ✅ Both opponent types working
+- ✅ Zero existing code broken
+
+**Benefits After Completion**:
 - 50% less code duplication
 - Easier to add new features
-- Consistent UX
+- Consistent UX across all modes
 - Better testability
 - Future-proof architecture
