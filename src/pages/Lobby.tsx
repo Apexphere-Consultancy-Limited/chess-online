@@ -92,7 +92,7 @@ function Lobby() {
       const response = await respondToChallenge({ challengeId, action: 'accept' })
       if (response?.status === 'accepted' && response.game) {
         await leaveLobby(false)
-        navigate(`/game/${response.game.id}`)
+        navigate(`/online/${response.game.id}`)
       }
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : 'Failed to accept challenge')
@@ -155,46 +155,51 @@ function Lobby() {
     <>
       <NavBar />
       <div className="lobby-page">
-        <LobbyHeader
-          currentLobby={currentLobby}
-          lobbies={lobbies}
-          status={status}
-          onSwitchLobby={(slug) => void switchLobby(slug)}
-          onToggleNotifications={() => setNotificationsOpen(true)}
-          unreadCount={unreadCount}
-        />
+        <div className="lobby-container">
+          <div className="lobby-container__left">
+            <LobbyHeader
+              currentLobby={currentLobby}
+              lobbies={lobbies}
+              status={status}
+              onSwitchLobby={(slug) => void switchLobby(slug)}
+              onToggleNotifications={() => setNotificationsOpen(true)}
+              unreadCount={unreadCount}
+            />
 
-      {combinedError && (
-        <div className="lobby-error" role="alert">
-          <p>{combinedError}</p>
-          <button type="button" onClick={() => setLocalError(null)}>
-            Dismiss
-          </button>
+            {combinedError && (
+              <div className="lobby-error" role="alert">
+                <p>{combinedError}</p>
+                <button type="button" onClick={() => setLocalError(null)}>
+                  Dismiss
+                </button>
+              </div>
+            )}
+
+            <section className="lobby-content__column lobby-content__column--challenges">
+              <ChallengePanel
+                incoming={incomingChallenges}
+                onAccept={(challengeId) => void handleAcceptClick(challengeId)}
+                onDecline={handleDeclineClick}
+                respondingTo={respondingTo}
+              />
+            </section>
+          </div>
+
+          <div className="lobby-container__right">
+            <section className="lobby-content__column lobby-content__column--players">
+              <h2>Players Online</h2>
+              <PlayerList
+                sessions={sessions}
+                currentUserId={currentUserId}
+                onChallenge={handleChallengeClick}
+                onCancelChallenge={handleCancelClick}
+                challengeInFlight={challengeInFlight}
+                pendingChallenges={pendingChallengesMap}
+                cancellingId={cancellingId}
+              />
+            </section>
+          </div>
         </div>
-      )}
-
-      <div className="lobby-content">
-        <section className="lobby-content__column lobby-content__column--players">
-          <h2>Players Online</h2>
-          <PlayerList
-            sessions={sessions}
-            currentUserId={currentUserId}
-            onChallenge={handleChallengeClick}
-            onCancelChallenge={handleCancelClick}
-            challengeInFlight={challengeInFlight}
-            pendingChallenges={pendingChallengesMap}
-            cancellingId={cancellingId}
-          />
-        </section>
-        <section className="lobby-content__column lobby-content__column--challenges">
-          <ChallengePanel
-            incoming={incomingChallenges}
-            onAccept={(challengeId) => void handleAcceptClick(challengeId)}
-            onDecline={handleDeclineClick}
-            respondingTo={respondingTo}
-          />
-        </section>
-      </div>
 
       <NotificationDrawer
         open={notificationsOpen}
@@ -205,7 +210,7 @@ function Lobby() {
         onMarkAll={() => markAllRead()}
         onNavigateToGame={(gameId) => {
           setNotificationsOpen(false)
-          navigate(`/game/${gameId}`)
+          navigate(`/online/${gameId}`)
         }}
         onNavigateToChallenge={(challengeId) => {
           setNotificationsOpen(false)
