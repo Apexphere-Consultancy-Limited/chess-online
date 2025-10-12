@@ -1,30 +1,23 @@
 /**
  * GameOpponent Interface
  *
- * Abstraction layer that allows the unified chess game to work with
- * different opponent types (online human, local bot, local friend)
- * without knowing the implementation details.
+ * FOCUSED ON COMMUNICATION ONLY!
+ * Handles ONLY player-to-player communication (sending/receiving moves).
+ * Does NOT handle: chess rules, board state, sounds, UI, game logic.
+ *
+ * Separation of Concerns:
+ * - Game Component: Chess rules, board state, sounds, UI, validation
+ * - Opponent: Message passing between players (send/receive moves)
  */
 
 /**
- * Represents a chess move in the game
+ * Simple move data - just algebraic notation
+ * The Game owns validation and board state, opponent just passes messages
  */
-export interface ChessMove {
-  from: string          // e.g., "e2"
-  to: string            // e.g., "e4"
-  promotion?: string    // e.g., "q" for queen promotion
-  fen?: string          // FEN string after the move
-  playerId?: string     // ID of the player making the move
-  moveNumber?: number   // Move number in the game
-}
-
-/**
- * Represents the result of a completed game
- */
-export interface GameResult {
-  winner: 'white' | 'black' | 'draw'
-  reason: 'checkmate' | 'resignation' | 'timeout' | 'stalemate' | 'draw_agreement' | 'insufficient_material' | 'forfeit'
-  winnerId?: string
+export interface OpponentMove {
+  from: string        // e.g., "e2"
+  to: string          // e.g., "e4"
+  promotion?: string  // e.g., "q" for queen promotion
 }
 
 /**
@@ -36,28 +29,34 @@ export type OpponentConfig =
   | { type: 'friend' }
 
 /**
- * Main opponent interface that all opponent implementations must follow
+ * Main opponent interface - COMMUNICATION ONLY
+ *
+ * Think of it as a message bus:
+ * - sendMove() = "Tell opponent I moved"
+ * - onOpponentMove() = "Listen for opponent's move"
  */
 export interface GameOpponent {
   /**
-   * Send a move to the opponent
-   * For online: sends to server and broadcasts
-   * For bot: triggers AI calculation
-   * For friend: no-op (local game)
+   * Send my move to the opponent
+   *
+   * - Online: Sends to server + broadcasts via realtime
+   * - Bot: Triggers AI to calculate response
+   * - Friend: No-op (both players are local)
+   *
+   * Game has already validated and applied the move.
+   * Opponent just notifies the other player.
    */
-  sendMove: (move: ChessMove) => Promise<void>
+  sendMove: (move: OpponentMove) => Promise<void>
 
   /**
-   * Subscribe to opponent moves
-   * Returns unsubscribe function
+   * Subscribe to opponent's moves
+   *
+   * When opponent makes a move, callback receives move data.
+   * Game will validate and apply the move to the board.
+   *
+   * Returns unsubscribe function.
    */
-  onOpponentMove: (callback: (move: ChessMove) => void) => () => void
-
-  /**
-   * Subscribe to game end events
-   * Returns unsubscribe function
-   */
-  onGameEnd: (callback: (result: GameResult) => void) => () => void
+  onOpponentMove: (callback: (move: OpponentMove) => void) => () => void
 
   /**
    * Clean up and disconnect
@@ -65,7 +64,11 @@ export interface GameOpponent {
   disconnect: () => void
 
   /**
-   * Whether this is an online opponent (affects UI - show forfeit, hide undo/hints)
+   * Whether this is an online opponent
+   *
+   * UI uses this to decide which controls to show:
+   * - Online: Show "Forfeit", hide "Undo/Hints"
+   * - Offline: Show "Undo/Hints", hide "Forfeit"
    */
   readonly isOnline: boolean
 
