@@ -13,6 +13,7 @@ interface ChessBoardProps {
   onDragOver: (e: React.DragEvent) => void
   onDrop: (row: number, col: number) => void
   onDragEnd: () => void
+  playerColor?: 'white' | 'black' // For board rotation in online games
 }
 
 function ChessBoard({
@@ -26,16 +27,28 @@ function ChessBoard({
   onDragStart,
   onDragOver,
   onDrop,
-  onDragEnd
+  onDragEnd,
+  playerColor = 'white'
 }: ChessBoardProps) {
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
   const ranks = ['8', '7', '6', '5', '4', '3', '2', '1']
 
+  // Rotate board for black player
+  const displayBoard = playerColor === 'black'
+    ? boardState.slice().reverse().map(row => row.slice().reverse())
+    : boardState
+
+  const displayFiles = playerColor === 'black' ? files.slice().reverse() : files
+  const displayRanks = playerColor === 'black' ? ranks.slice().reverse() : ranks
+
   return (
     <div className="chess-board-wrapper">
       <div className="chess-board" id="board">
-        {boardState.map((row, rowIndex) =>
-          row.map((piece, colIndex) => {
+        {displayBoard.map((row, displayRowIndex) =>
+          row.map((piece, displayColIndex) => {
+          // Convert display indices back to actual board indices for logic
+          const rowIndex = playerColor === 'black' ? 7 - displayRowIndex : displayRowIndex
+          const colIndex = playerColor === 'black' ? 7 - displayColIndex : displayColIndex
           const isLight = (rowIndex + colIndex) % 2 === 0
           const isSelected =
             selectedSquare !== null &&
@@ -87,12 +100,12 @@ function ChessBoard({
                 onDragEnd={onDragEnd}
               />
               {/* Show file letter on bottom row */}
-              {rowIndex === 7 && (
-                <div className="coordinate-file">{files[colIndex]}</div>
+              {displayRowIndex === 7 && (
+                <div className="coordinate-file">{displayFiles[displayColIndex]}</div>
               )}
               {/* Show rank number on left column */}
-              {colIndex === 0 && (
-                <div className="coordinate-rank">{ranks[rowIndex]}</div>
+              {displayColIndex === 0 && (
+                <div className="coordinate-rank">{displayRanks[displayRowIndex]}</div>
               )}
             </div>
           )
