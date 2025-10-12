@@ -15,11 +15,12 @@ import {
 } from '../utils/chess'
 import { useGameBoard } from './useGameBoard'
 import { useComputerAI } from './useComputerAI'
-import { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound } from '../utils/soundEffects'
+import { useChessSounds } from './useChessSounds'
 
 export function useMoveRules() {
   // Use modular hooks
   const gameState = useGameBoard()
+  const { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound } = useChessSounds()
 
   const {
     boardState,

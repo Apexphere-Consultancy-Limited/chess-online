@@ -13,7 +13,7 @@ import CapturedPieces from './CapturedPieces'
 import Timer from './Timer'
 import { PIECES } from '../types/chess'
 import type { BoardState, PieceSymbol, PieceType, Move } from '../types/chess'
-import { initializeSounds } from '../utils/soundEffects'
+import { useChessSounds } from '../hooks/useChessSounds'
 
 // Piece values for score calculation
 const PIECE_VALUES: Record<PieceType, number> = {
@@ -62,11 +62,11 @@ export default function OnlineGame() {
   const [blackTimeLeft, setBlackTimeLeft] = useState(600)
   const [timerActive, setTimerActive] = useState(false)
 
-  // Auto-hide navbar after 3 seconds and initialize sounds
-  useEffect(() => {
-    // Initialize sounds when game starts
-    initializeSounds()
+  // Initialize sound effects
+  const { playMoveSound, playCaptureSound, playCheckSound } = useChessSounds()
 
+  // Auto-hide navbar after 3 seconds
+  useEffect(() => {
     const timer = setTimeout(() => {
       setShowNavbar(false)
     }, 3000)
@@ -412,6 +412,15 @@ export default function OnlineGame() {
         updateBoardState()
         setSelectedSquare(null)
         setValidMoves([])
+
+        // Play sound effects based on move type
+        if (chess.inCheck()) {
+          playCheckSound()
+        } else if (move.captured) {
+          playCaptureSound()
+        } else {
+          playMoveSound()
+        }
 
         setGame((prev) => {
           if (!prev) return prev
