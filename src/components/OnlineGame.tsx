@@ -11,19 +11,9 @@ import NavBar from './NavBar'
 import MoveHistory from './MoveHistory'
 import CapturedPieces from './CapturedPieces'
 import Timer from './Timer'
-import { PIECES } from '../types/chess'
+import { PIECES, PIECE_VALUES } from '../types/chess'
 import type { BoardState, PieceSymbol, PieceType, Move } from '../types/chess'
 import { useChessSounds } from '../hooks/useChessSounds'
-
-// Piece values for score calculation
-const PIECE_VALUES: Record<PieceType, number> = {
-  pawn: 1,
-  knight: 3,
-  bishop: 3,
-  rook: 5,
-  queen: 9,
-  king: 0,
-}
 
 const TYPE_MAP: Record<string, PieceType> = {
   p: 'pawn',
