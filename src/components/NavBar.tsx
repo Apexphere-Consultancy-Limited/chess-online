@@ -101,13 +101,18 @@ function NavBar() {
               </a>
             </li>
             <li>
-              <NavLink to="/lobby" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
+              <NavLink to="/online" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
                 Play Online
               </NavLink>
             </li>
             <li>
               <NavLink to="/game" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
                 Play vs Bot
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/learning" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
+                Puzzles
               </NavLink>
             </li>
             <li>
@@ -162,13 +167,18 @@ function NavBar() {
               </a>
             </li>
             <li>
-              <NavLink to="/lobby" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
+              <NavLink to="/online" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
                 Play Online
               </NavLink>
             </li>
             <li>
               <NavLink to="/game" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
                 Play vs Bot
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/learning" className={({ isActive }) => (isActive ? 'active' : '')} onClick={closeMenu}>
+                Puzzles
               </NavLink>
             </li>
             <li>

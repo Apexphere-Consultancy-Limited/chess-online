@@ -9,21 +9,23 @@ interface CapturedPiecesProps {
 
 function CapturedPieces({ color, capturedPieces, score }: CapturedPiecesProps) {
   const displayColor = color === 'white' ? 'White' : 'Black'
-  const oppositeColor = color === 'white' ? 'Black' : 'White'
 
   return (
     <div className="captured-pieces">
-      <h3>{oppositeColor}'s Captured</h3>
+      <h3>{displayColor}</h3>
       <div className="captured-list">
-        {capturedPieces.map((piece, index) => (
-          <span key={index} className="captured-piece">
-            <PieceIcon piece={piece} />
-          </span>
-        ))}
+        {capturedPieces.length > 0 ? (
+          capturedPieces.map((piece, index) => (
+            <span key={index} className="captured-piece">
+              <PieceIcon piece={piece} />
+            </span>
+          ))
+        ) : (
+          <span className="no-captures">No captures yet</span>
+        )}
       </div>
       <div className="score-display">
-        <div className="player-name">{displayColor} Score</div>
-        <div className="points">{score} points</div>
+        <div className="points">+{score}</div>
       </div>
     </div>
   )

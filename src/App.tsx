@@ -5,7 +5,7 @@ import Login from './pages/Login'
 import Profile from './pages/Profile'
 import LearningMode from './pages/LearningMode'
 import { AuthProvider } from './auth/AuthProvider'
-import Lobby from './pages/Lobby'
+import OnlineRouter from './pages/OnlineRouter'
 import RequireAuth from './auth/RequireAuth'
 
 function App() {
@@ -18,10 +18,18 @@ function App() {
           <Route path="/game" element={<Game />} />
           <Route path="/game/:gameId" element={<Game />} />
           <Route
-            path="/lobby"
+            path="/online"
             element={
               <RequireAuth>
-                <Lobby />
+                <OnlineRouter />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/online/:gameId"
+            element={
+              <RequireAuth>
+                <Game />
               </RequireAuth>
             }
           />

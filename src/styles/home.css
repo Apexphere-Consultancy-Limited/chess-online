@@ -193,11 +193,65 @@
     transform: scale(1.1);
 }
 
-.btn-hero-secondary {
-    background: transparent;
+.btn-hero-bot {
+    background: #f59e0b;
     color: white;
+    box-shadow: 0 20px 60px rgba(245, 158, 11, 0.4);
+}
+
+.btn-hero-bot:hover {
+    transform: scale(1.1) translateY(-4px);
+    box-shadow: 0 30px 80px rgba(245, 158, 11, 0.5);
+}
+
+.btn-hero-bot span {
+    position: relative;
+    z-index: 10;
+    transition: all 0.3s ease;
+}
+
+.btn-hero-bot svg {
+    position: relative;
+    z-index: 10;
+    transition: all 0.5s ease;
+}
+
+.btn-hero-bot:hover svg {
+    transform: translateX(12px) scale(1.25);
+}
+
+.btn-hero-bot::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to right, #f59e0b, #fbbf24);
+    opacity: 0;
+    transition: all 0.5s ease;
+    transform: scale(0);
+}
+
+.btn-hero-bot:hover::before {
+    opacity: 1;
+    transform: scale(1.5);
+}
+
+.btn-hero-bot::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: #f59e0b;
+    transition: all 0.5s ease;
+}
+
+.btn-hero-bot:hover::after {
+    transform: scale(1.1);
+}
+
+.btn-hero-secondary {
+    background: white;
+    color: #667eea;
     border: 4px solid white;
-    box-shadow: none;
+    box-shadow: 0 20px 60px rgba(255, 255, 255, 0.3);
     transition: all 0.5s ease;
 }
 
@@ -205,7 +259,7 @@
     background: white;
     color: #667eea;
     transform: scale(1.1) translateY(-4px);
-    box-shadow: 0 30px 80px rgba(255, 255, 255, 0.3);
+    box-shadow: 0 30px 80px rgba(255, 255, 255, 0.5);
 }
 
 .btn-hero-secondary svg {
@@ -215,6 +269,31 @@
 }
 
 .btn-hero-secondary:hover svg {
+    transform: rotate(90deg);
+}
+
+.btn-hero-outline {
+    background: transparent;
+    color: white;
+    border: 4px solid white;
+    box-shadow: none;
+    transition: all 0.5s ease;
+}
+
+.btn-hero-outline:hover {
+    background: white;
+    color: #667eea;
+    transform: scale(1.1) translateY(-4px);
+    box-shadow: 0 30px 80px rgba(255, 255, 255, 0.3);
+}
+
+.btn-hero-outline svg {
+    width: 2.25rem;
+    height: 2.25rem;
+    transition: all 0.5s ease;
+}
+
+.btn-hero-outline:hover svg {
     transform: rotate(90deg);
 }
 
@@ -520,6 +599,32 @@
 }
 
 .btn-hero-light:hover svg {
+    transform: translateX(8px);
+}
+
+.btn-hero-light-bot {
+    background: #f59e0b;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+    border-radius: 9999px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 40px rgba(245, 158, 11, 0.4);
+}
+
+.btn-hero-light-bot:hover {
+    transform: scale(1.1);
+    box-shadow: 0 20px 60px rgba(245, 158, 11, 0.5);
+}
+
+.btn-hero-light-bot svg {
+    transition: all 0.3s ease;
+}
+
+.btn-hero-light-bot:hover svg {
     transform: translateX(8px);
 }
 

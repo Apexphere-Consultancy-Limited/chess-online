@@ -56,14 +56,14 @@ function Home() {
             Free, fast, and fun chess for everyone.
           </p>
           <div className="hero-buttons">
+            <Link to="/online" className="btn-hero btn-hero-bot">
+              <span>Play Online</span>
+            </Link>
             <Link to="/game" className="btn-hero btn-hero-primary">
-              <span>Start Playing Now</span>
-              <svg width="36" height="36" viewBox="0 0 20 20" fill="none">
-                <path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <span>Play vs Bot</span>
             </Link>
             <Link to="/learning" className="btn-hero btn-hero-secondary">🧩 Puzzles</Link>
-            <a href="#features" className="btn-hero btn-hero-secondary">Learn More</a>
+            <a href="#features" className="btn-hero btn-hero-outline">Learn More</a>
           </div>
 
           <div className="scroll-indicator">
@@ -227,11 +227,11 @@ function Home() {
             </div>
           </div>
           <div className="cta-center">
+            <Link to="/online" className="btn-large btn-hero-light-bot">
+              <span>Play Online</span>
+            </Link>
             <Link to="/game" className="btn-large btn-hero-light">
-              <span>Start Playing Now</span>
-              <svg width="28" height="28" viewBox="0 0 20 20" fill="none">
-                <path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <span>Play vs Bot</span>
             </Link>
           </div>
         </div>
