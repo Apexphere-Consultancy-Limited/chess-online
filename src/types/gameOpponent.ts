@@ -18,6 +18,7 @@ export interface OpponentMove {
   from: string        // e.g., "e2"
   to: string          // e.g., "e4"
   promotion?: string  // e.g., "q" for queen promotion
+  fen?: string        // Optional: FEN string after the move (for bot to calculate response)
 }
 
 /**
