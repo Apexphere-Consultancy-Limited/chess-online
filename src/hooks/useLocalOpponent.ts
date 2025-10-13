@@ -1,4 +1,4 @@
-import { useRef, useCallback, useMemo } from 'react'
+import { useRef, useCallback, useMemo, useState } from 'react'
 import { Chess } from 'chess.js'
 import type { GameOpponent, OpponentMove, OpponentConfig } from '../types/gameOpponent'
 import { getStockfishBestMove } from '../utils/ai/stockfish'
@@ -9,7 +9,7 @@ import type { BoardState, PieceSymbol } from '../types/chess'
  *
  * Responsibilities:
  * - Bot: Calculate and return next move after artificial delay
- * - Friend: Do nothing (both players are local)
+ * - Friend: Track whose turn it is (for isThinking indicator)
  * - That's it! Game handles all validation, board state, sounds
  *
  * Note: The bot creates a temporary Chess instance from FEN to calculate moves,
@@ -24,6 +24,8 @@ export function useLocalOpponent(
   const moveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isCalculatingRef = useRef(false)
   const currentFenRef = useRef<string>('')
+  const [currentPlayer, setCurrentPlayer] = useState<'white' | 'black'>('white')
+  const [isThinking, setIsThinking] = useState(false)
 
   // Helper to convert board position to algebraic notation
   const positionToSquare = (row: number, col: number): string => {
@@ -39,10 +41,11 @@ export function useLocalOpponent(
     }
 
     isCalculatingRef.current = true
+    setIsThinking(true) // Bot starts thinking
 
     try {
-      // Artificial delay for natural feel (200-500ms)
-      const delay = 200 + Math.random() * 300
+      // Artificial delay to simulate human thinking time (1-2 seconds)
+      const delay = 1000 + Math.random() * 1000
       await new Promise(resolve => setTimeout(resolve, delay))
 
       // Create a fresh Chess instance from the current FEN to calculate moves
@@ -57,7 +60,8 @@ export function useLocalOpponent(
           const move: OpponentMove = {
             from: randomMove.from,
             to: randomMove.to,
-            promotion: randomMove.promotion || 'q',
+            // Only include promotion if this move is actually a promotion
+            ...(randomMove.promotion && { promotion: randomMove.promotion }),
           }
 
           // Notify game of bot's move
@@ -101,10 +105,18 @@ export function useLocalOpponent(
         })
 
         if (stockfishMove) {
+          const fromSquare = positionToSquare(stockfishMove.from.row, stockfishMove.from.col)
+          const toSquare = positionToSquare(stockfishMove.to.row, stockfishMove.to.col)
+
+          // Check if this is a pawn promotion (pawn reaching back rank)
+          const piece = tempChess.get(fromSquare as any)
+          const isPromotion = piece?.type === 'p' && (stockfishMove.to.row === 0 || stockfishMove.to.row === 7)
+
           const move: OpponentMove = {
-            from: positionToSquare(stockfishMove.from.row, stockfishMove.from.col),
-            to: positionToSquare(stockfishMove.to.row, stockfishMove.to.col),
-            promotion: 'q', // Bot always promotes to queen
+            from: fromSquare,
+            to: toSquare,
+            // Only include promotion if this is actually a pawn promotion
+            ...(isPromotion && { promotion: 'q' }),
           }
 
           // Notify game of bot's move
@@ -113,6 +125,7 @@ export function useLocalOpponent(
       }
     } finally {
       isCalculatingRef.current = false
+      setIsThinking(false) // Bot finished thinking
     }
   }, [config])
 
@@ -124,6 +137,11 @@ export function useLocalOpponent(
     // Store the current FEN if provided (so bot calculates from correct position)
     if (move.fen) {
       currentFenRef.current = move.fen
+
+      // Parse FEN to get current turn and update state
+      const fenParts = move.fen.split(' ')
+      const turn = fenParts[1] === 'w' ? 'white' : 'black'
+      setCurrentPlayer(turn)
     }
 
     if (config.type === 'bot') {
@@ -152,13 +170,21 @@ export function useLocalOpponent(
     isCalculatingRef.current = false
   }, [])
 
-  const opponent: GameOpponent = useMemo(() => ({
-    sendMove,
-    onOpponentMove,
-    disconnect,
-    isOnline: false,
-    type: config.type,
-  }), [sendMove, onOpponentMove, disconnect, config.type])
+  const opponent: GameOpponent = useMemo(() => {
+    // Universal isThinking: true when it's opponent's turn (black)
+    // - Friend: black player is thinking
+    // - Bot: black player (bot) is thinking, includes calculation state
+    const opponentIsThinking = currentPlayer === 'black' && (config.type === 'friend' || isThinking)
+
+    return {
+      sendMove,
+      onOpponentMove,
+      disconnect,
+      isOnline: false,
+      type: config.type,
+      isThinking: opponentIsThinking,
+    }
+  }, [sendMove, onOpponentMove, disconnect, config.type, currentPlayer, isThinking])
 
   return opponent
 }

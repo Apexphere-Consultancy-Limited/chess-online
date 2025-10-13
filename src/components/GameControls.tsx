@@ -15,8 +15,8 @@ function GameControls({ onUndo, onHint, onReset, canUndo, gameMode }: GameContro
         className="control-btn icon-btn"
         id="undoBtn"
         onClick={onUndo}
-        disabled={!canUndo || gameMode === 'friend'}
-        title="Undo Move"
+        disabled={!canUndo}
+        title={gameMode === 'friend' ? 'Undo Last Move' : 'Undo Your Move'}
       >
         <Undo2 size={20} />
       </button>

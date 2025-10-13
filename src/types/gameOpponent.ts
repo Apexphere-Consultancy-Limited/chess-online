@@ -77,4 +77,17 @@ export interface GameOpponent {
    * Opponent type for logging/debugging
    */
   readonly type: OpponentConfig['type']
+
+  /**
+   * Whether it's the opponent's turn (they are "thinking")
+   *
+   * Universal concept across all opponent types:
+   * - Bot: true during their turn (includes artificial delay + calculation)
+   * - Online: true when waiting for their move
+   * - Friend: true when it's their turn (black player thinking)
+   *
+   * Philosophy: All players "think" on their turn. Bots just add artificial
+   * delay to simulate human reaction time.
+   */
+  readonly isThinking?: boolean
 }

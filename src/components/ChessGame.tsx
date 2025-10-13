@@ -10,6 +10,7 @@ import PromotionModal from './PromotionModal'
 import GameOverModal from './GameOverModal'
 import GameControls from './GameControls'
 import BotChat from './BotChat'
+import ConfirmationModal from './ConfirmationModal'
 import { PIECES, PIECE_VALUES } from '../types/chess'
 import type { BoardState, PieceSymbol, PieceType, Move, PieceColor } from '../types/chess'
 
@@ -72,14 +73,13 @@ export default function ChessGame({ opponent, playerColor = 'white', gameMode = 
   // Modals and game state
   const [promotionData, setPromotionData] = useState<{ row: number; col: number; color: PieceColor } | null>(null)
   const [gameOver, setGameOver] = useState<{ winner: PieceColor | 'draw'; reason: string } | null>(null)
+  const [showForfeitConfirm, setShowForfeitConfirm] = useState(false)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
 
   // Timers
   const [whiteTimeLeft, setWhiteTimeLeft] = useState(600) // 10 minutes
   const [blackTimeLeft, setBlackTimeLeft] = useState(600)
   const [timerActive, setTimerActive] = useState(false)
-
-  // Bot thinking indicator
-  const [isComputerThinking, setIsComputerThinking] = useState(false)
 
   // Initialize board from chess.js
   useEffect(() => {
@@ -204,9 +204,6 @@ export default function ChessGame({ opponent, playerColor = 'white', gameMode = 
   useEffect(() => {
     const unsubscribe = opponent.onOpponentMove(async (move) => {
       try {
-        // Bot finished thinking
-        setIsComputerThinking(false)
-
         // Apply opponent's move using chess.js
         chess.move({
           from: move.from,
@@ -233,7 +230,6 @@ export default function ChessGame({ opponent, playerColor = 'white', gameMode = 
         }
       } catch (error) {
         console.error('Failed to apply opponent move:', error)
-        setIsComputerThinking(false)
       }
     })
 
@@ -289,11 +285,6 @@ export default function ChessGame({ opponent, playerColor = 'white', gameMode = 
           promotion: promotionPiece?.charAt(0),
           fen: chess.fen(), // Current position after the move
         })
-
-        // If bot game and it's bot's turn now, show thinking indicator
-        if (opponent.type === 'bot' && !gameOver) {
-          setIsComputerThinking(true)
-        }
 
         // Check game state and play sounds
         if (chess.isCheckmate()) {
@@ -434,12 +425,24 @@ export default function ChessGame({ opponent, playerColor = 'white', gameMode = 
   const handleUndo = useCallback(() => {
     if (opponent.isOnline) return // No undo in online games
 
-    chess.undo()
+    // When playing vs bot, undo both bot's move AND player's move
+    // This way player can retry their decision (bot's move is just a consequence)
+    if (gameMode !== 'friend') {
+      // Undo bot's last move
+      chess.undo()
+      // Undo player's last move
+      chess.undo()
+    } else {
+      // Friend mode: just undo the last move (could be either player)
+      chess.undo()
+    }
+
     updateBoardState()
     setSelectedSquare(null)
     setValidMoves([])
     setHintSquares([])
-  }, [chess, opponent.isOnline, updateBoardState])
+    setLastMove(null) // Clear last move highlight
+  }, [chess, opponent.isOnline, gameMode, updateBoardState])
 
   // Handle hint (offline only)
   const handleHint = useCallback(() => {
@@ -465,7 +468,11 @@ export default function ChessGame({ opponent, playerColor = 'white', gameMode = 
   }, [chess, opponent.isOnline])
 
   // Handle reset
-  const handleReset = useCallback(() => {
+  const handleResetClick = useCallback(() => {
+    setShowResetConfirm(true)
+  }, [])
+
+  const handleResetConfirm = useCallback(() => {
     chess.reset()
     updateBoardState()
     setSelectedSquare(null)
@@ -477,10 +484,19 @@ export default function ChessGame({ opponent, playerColor = 'white', gameMode = 
     setTimerActive(false)
     setWhiteTimeLeft(600)
     setBlackTimeLeft(600)
+    setShowResetConfirm(false)
   }, [chess, updateBoardState])
 
+  const handleResetCancel = useCallback(() => {
+    setShowResetConfirm(false)
+  }, [])
+
   // Handle forfeit (online only)
-  const handleForfeit = useCallback(() => {
+  const handleForfeitClick = useCallback(() => {
+    setShowForfeitConfirm(true)
+  }, [])
+
+  const handleForfeitConfirm = useCallback(() => {
     if (!opponent.isOnline) return
 
     // Set game over with opponent as winner
@@ -488,7 +504,12 @@ export default function ChessGame({ opponent, playerColor = 'white', gameMode = 
       winner: playerColor === 'white' ? 'black' : 'white',
       reason: 'forfeit',
     })
+    setShowForfeitConfirm(false)
   }, [opponent.isOnline, playerColor])
+
+  const handleForfeitCancel = useCallback(() => {
+    setShowForfeitConfirm(false)
+  }, [])
 
   return (
     <div className="game-container">
@@ -553,7 +574,7 @@ export default function ChessGame({ opponent, playerColor = 'white', gameMode = 
               gameMode={gameMode}
               inCheck={chess.inCheck()}
               lastMoveCapture={moveHistory.length > 0 && moveHistory[moveHistory.length - 1]?.captured !== undefined}
-              isComputerThinking={isComputerThinking}
+              isComputerThinking={opponent.isThinking || false}
             />
           )}
 
@@ -566,7 +587,7 @@ export default function ChessGame({ opponent, playerColor = 'white', gameMode = 
             <GameControls
               onUndo={handleUndo}
               onHint={handleHint}
-              onReset={handleReset}
+              onReset={handleResetClick}
               canUndo={moveHistory.length > 0}
               gameMode={gameMode}
             />
@@ -577,7 +598,7 @@ export default function ChessGame({ opponent, playerColor = 'white', gameMode = 
             <div className="online-game-controls">
               <button
                 className="control-btn forfeit-btn"
-                onClick={handleForfeit}
+                onClick={handleForfeitClick}
                 disabled={!!gameOver}
               >
                 Forfeit
@@ -599,7 +620,29 @@ export default function ChessGame({ opponent, playerColor = 'white', gameMode = 
         <GameOverModal
           winner={gameOver.winner}
           reason={gameOver.reason}
-          onReset={handleReset}
+          onReset={handleResetConfirm}
+        />
+      )}
+
+      {showForfeitConfirm && (
+        <ConfirmationModal
+          title="Forfeit Game?"
+          message="Are you sure you want to forfeit? This will count as a loss."
+          confirmText="Forfeit"
+          cancelText="Cancel"
+          onConfirm={handleForfeitConfirm}
+          onCancel={handleForfeitCancel}
+        />
+      )}
+
+      {showResetConfirm && (
+        <ConfirmationModal
+          title="Reset Game?"
+          message="Are you sure you want to reset? All progress will be lost."
+          confirmText="Reset"
+          cancelText="Cancel"
+          onConfirm={handleResetConfirm}
+          onCancel={handleResetCancel}
         />
       )}
     </div>

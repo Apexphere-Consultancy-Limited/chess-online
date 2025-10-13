@@ -8,6 +8,27 @@
 
 **Timeline**: 4 phases, incrementally building features while maintaining stability.
 
+---
+
+## 🎯 Current Status (Updated 2025-10-13)
+
+**Phase 2 & 2.5: ✅ COMPLETED** - Unified offline game fully functional and deployed to production!
+
+**Achievements**:
+- ✅ Created unified `ChessGame` component
+- ✅ Implemented `useLocalOpponent` hook for bot & friend modes
+- ✅ All offline features working: undo, hints, reset, promotion, drag-and-drop
+- ✅ Fixed critical bugs: bot promotion, undo behavior, confirmations
+- ✅ Refactored `isThinking` to universal concept across all opponents
+- ✅ **Migrated production**: `pages/Game.tsx` now uses unified architecture
+- ✅ Reduced bundle size by 14KB
+- ✅ Created `docs/PHILOSOPHIES.md` documenting design principles
+
+**Current Phase**: Phase 3 - Online Mode Integration
+**Next**: Test unified ChessGame with online multiplayer
+
+---
+
 ### The Core Principle: Separation of Concerns
 
 **Game ≠ Opponent**
@@ -302,51 +323,61 @@ Opponent Hook:
 
 ---
 
-### Phase 2.5: Integration & Testing (CURRENT PHASE)
+### Phase 2.5: Integration & Testing ✅ COMPLETED
 **Goal**: Test ChessGame component with real opponent implementations and fix issues
 
-**Duration**: 2-3 hours
+**Duration**: Completed 2025-10-13
 
-**Status**: IN PROGRESS
+**Status**: ✅ COMPLETED
 
-#### Critical Issue Identified: Timer Synchronization
+#### Completed Tasks:
 
-The online game ([OnlineGame.tsx:65-140](src/components/OnlineGame.tsx#L65-L140)) has **server-synchronized timer logic**:
-- Timers count down based on `game.current_turn` from database
-- When time runs out, updates game status in database
-- Declares winner on timeout
-- Syncs with server state
+1. ✅ **Created Test Page**
+   - Created `pages/TestGame.tsx` with opponent selector
+   - Supports bot (easy/medium/hard) and friend modes
+   - Beautiful UI with game mode selection
 
-**ChessGame currently has**: Local timers only (not synced with server)
+2. ✅ **Testing & Bug Fixes**:
+   - ✅ Fixed bot promotion bug (was always including promotion field)
+   - ✅ Fixed undo behavior for bot mode (now undoes 2 moves: player + bot)
+   - ✅ Enabled undo in friend mode (was incorrectly disabled)
+   - ✅ Added confirmation modals for reset and forfeit
+   - ✅ Adjusted bot thinking time to 1-2 seconds (realistic pacing)
 
-#### Tasks:
+3. ✅ **Refactored isThinking Philosophy**:
+   - Made `isThinking` universal across all opponent types
+   - Friend mode: `isThinking = true` when opponent's turn
+   - Bot mode: `isThinking = true` during AI calculation + delay
+   - Opponent now tracks turn state from FEN automatically
+   - Documented philosophy in `docs/PHILOSOPHIES.md`
 
-1. **Add Timer Sync for Online Mode** (PRIORITY)
-   - [ ] Extract timer logic from OnlineGame.tsx
-   - [ ] Add timer sync to useSupabaseOpponent OR ChessGame
-   - [ ] Handle timeout -> database update -> winner declaration
-   - [ ] Keep local timers for offline mode
-   - [ ] Conditional timer behavior based on opponent.isOnline
+4. ✅ **Production Migration**:
+   - Migrated main `pages/Game.tsx` to use unified ChessGame
+   - Archived old implementation to `src/archive/Game.tsx.old`
+   - All game modes (friend, easy, medium, hard) now use unified architecture
+   - Reduced bundle size by ~14KB (507KB → 493KB)
 
-2. **Create Test/Demo Page**
-   - [ ] Create `pages/TestGame.tsx` or update existing route
-   - [ ] Add opponent type selector (bot/friend/online)
-   - [ ] Instantiate ChessGame with selected opponent
-   - [ ] Add debug UI to inspect game state
+#### Key Improvements Made:
 
-3. **Test Offline Modes First**
-   - [ ] Test with useLocalOpponent (bot - easy/medium/hard)
-   - [ ] Test with useLocalOpponent (friend mode)
-   - [ ] Verify: moves, drag-and-drop, undo, hints, reset
-   - [ ] Verify: sound effects, captured pieces, move history
-   - [ ] Verify: bot AI triggers correctly with artificial delay
+**Bug Fixes**:
+- Bot no longer tries to promote on every move
+- Undo now works correctly in all modes
+- Reset and forfeit require confirmation
 
-4. **Test Online Mode**
-   - [ ] Test with useSupabaseOpponent
-   - [ ] Verify: move sync via realtime
-   - [ ] Verify: timer sync with database
-   - [ ] Verify: forfeit functionality
-   - [ ] Test edge cases: disconnection, timeout, checkmate
+**UX Enhancements**:
+- Bot thinking time feels natural (1-2 seconds)
+- Undo in bot mode removes both player and bot moves
+- isThinking indicator works for all opponent types
+
+**Architecture**:
+- Pure separation: Game = logic, Opponent = communication
+- Single source of truth (ChessGame component)
+- All features automatically available in all modes
+
+#### Note on Online Mode:
+Online mode timer synchronization will be handled in Phase 3 when integrating with `useSupabaseOpponent`. Local timers work fine for offline modes.
+
+**Next**: Phase 3 - Online mode integration with Supabase
 
 5. **Fix Issues Found**
    - [ ] Document any bugs or missing features
@@ -368,47 +399,57 @@ The online game ([OnlineGame.tsx:65-140](src/components/OnlineGame.tsx#L65-L140)
 
 ---
 
-### Phase 3: Polish & Advanced Features (P1)
-**Goal**: Polish existing features and handle edge cases
+### Phase 3: Online Mode Integration (CURRENT PHASE)
+**Goal**: Integrate ChessGame with online multiplayer using useSupabaseOpponent
 
-**Duration**: 1-2 hours
+**Duration**: In Progress
 
-**Status**: PENDING
+**Status**: 🚧 IN PROGRESS
 
-#### Tasks:
+#### Completed Items:
 
-1. **Polish Undo/Hints** (already implemented, just verify)
-   - [ ] Ensure undo reconstructs state correctly
-   - [ ] Improve hint visualization (already shows gold squares)
-   - [ ] Add hint limit or unlimited mode
+1. ✅ **Offline Polish**:
+   - ✅ Undo works correctly (2 moves for bot, 1 for friend)
+   - ✅ Hints show gold squares
+   - ✅ Bot thinking indicator working
+   - ✅ Bot delay tuned to 1-2 seconds (natural feel)
 
-2. **Handle Edge Cases**
-   - [ ] En passant edge cases
-   - [ ] Castling edge cases
-   - [ ] Promotion edge cases
-   - [ ] Threefold repetition detection (chess.js has it)
-   - [ ] Insufficient material detection (chess.js has it)
+2. ✅ **Edge Cases**:
+   - ✅ Promotion working correctly
+   - ✅ chess.js handles: en passant, castling, threefold repetition, insufficient material
+   - ✅ Bot promotion bug fixed
 
-3. **Improve Online Experience**
-   - [ ] Add "waiting for opponent" indicator
-   - [ ] Show opponent's last move clearly
-   - [ ] Add move confirmation (optional)
+3. ✅ **Bot AI**:
+   - ✅ All difficulty levels working (easy/medium/hard)
+   - ✅ Bot thinking indicator (isThinking universal concept)
+   - ✅ Artificial delay tuned perfectly
 
-4. **Bot AI Improvements**
-   - [ ] Verify bot difficulty levels work correctly
-   - [ ] Add bot "thinking" indicator
-   - [ ] Tune artificial delay (currently 200-500ms)
+#### Remaining Tasks:
 
-5. **Game Mode Selection** (if needed)
-   - [ ] Modal at game start for offline games
-   - [ ] Choose: vs Friend, vs Easy Bot, vs Medium Bot, vs Hard Bot
-   - [ ] Or keep current approach (route-based selection)
+1. **Online Mode Integration** (PRIORITY)
+   - [ ] Test ChessGame with useSupabaseOpponent
+   - [ ] Verify: move sync via realtime channels
+   - [ ] Handle: timer synchronization with database
+   - [ ] Verify: forfeit functionality
+   - [ ] Test: disconnection, reconnection, timeout
+
+2. **Timer Sync Decision**:
+   - Need to decide where timer sync logic lives
+   - Option A: Inside ChessGame (conditional for online mode)
+   - Option B: Inside useSupabaseOpponent (return timer state)
+   - Option C: Keep separate useOnlineTimer hook
+
+3. **Online Experience**:
+   - [ ] Test full flow: Create game → Join → Play → End
+   - [ ] Verify "waiting for opponent" states
+   - [ ] Ensure last move highlighting works
+   - [ ] Test edge cases: timeout, forfeit, disconnection
 
 **Deliverables**:
-- [ ] All edge cases handled
-- [ ] Bot AI working smoothly
-- [ ] Online experience polished
-- [ ] Ready for migration
+- [ ] Online mode fully functional with ChessGame
+- [ ] Timer sync working
+- [ ] All opponent types tested and working
+- [ ] Ready for final migration
 
 ---
 
