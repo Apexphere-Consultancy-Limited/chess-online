@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import NavBar from '../components/NavBar'
 import LobbyHeader from '../components/lobby/LobbyHeader'
@@ -38,7 +38,18 @@ function Lobby() {
   const [confirmCancel, setConfirmCancel] = useState<{ challengeId: string; playerName: string } | null>(null)
   const [confirmDecline, setConfirmDecline] = useState<{ challengeId: string; playerName: string } | null>(null)
 
-  const { notifications, unreadCount, loading: notificationsLoading, markRead, markAllRead } = useNotifications()
+  const { notifications, unreadCount, loading: notificationsLoading, markRead, markAllRead } = useNotifications({
+    onInsert: async (notification) => {
+      // Handle game_ready notification - navigate both players to game board
+      if (notification.type === 'game_ready' && notification.payload) {
+        const payload = notification.payload as { gameId: string; color: string }
+
+        // Leave lobby and navigate to game
+        await leaveLobby(false)
+        navigate(`/online/${payload.gameId}`)
+      }
+    }
+  })
 
   const currentUserId = user?.id ?? null
 
@@ -89,11 +100,8 @@ function Lobby() {
     setLocalError(null)
     setRespondingTo(challengeId)
     try {
-      const response = await respondToChallenge({ challengeId, action: 'accept' })
-      if (response?.status === 'accepted' && response.game) {
-        await leaveLobby(false)
-        navigate(`/online/${response.game.id}`)
-      }
+      await respondToChallenge({ challengeId, action: 'accept' })
+      // Backend will send game_ready notification which navigates both players to game
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : 'Failed to accept challenge')
     } finally {
@@ -142,6 +150,7 @@ function Lobby() {
       setCancellingId(null)
     }
   }
+
 
   if (loading && !currentLobby) {
     return (
@@ -255,6 +264,7 @@ function Lobby() {
           onCancel={() => setConfirmDecline(null)}
         />
       )}
+
       </div>
     </>
   )

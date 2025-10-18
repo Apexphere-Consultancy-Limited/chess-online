@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { Chess } from 'chess.js'
 import type { GameOpponent } from '../types/gameOpponent'
 import { useChessSounds } from '../hooks/useChessSounds'
+import { supabase } from '../lib/supabaseClient'
+import { resignGame } from '../hooks/useMakeMove'
 import ChessBoard from './ChessBoard'
 import MoveHistory from './MoveHistory'
 import CapturedPieces from './CapturedPieces'
@@ -31,6 +33,13 @@ interface ChessGameProps {
   opponent: GameOpponent
   playerColor?: 'white' | 'black' // For online games, which color am I?
   gameMode?: 'friend' | 'ai-easy' | 'ai-medium' | 'ai-hard' // For offline games
+  gameId?: string // For online games, needed for timer sync
+  initialFen?: string // For online games, start from saved position
+  onForfeit?: () => void // Callback when player forfeits (for navigation)
+  externalGameResult?: { // For online games, when opponent resigns/times out
+    winner: 'white' | 'black' | 'draw'
+    reason: string
+  }
 }
 
 const TYPE_MAP: Record<string, PieceType> = {
@@ -42,9 +51,23 @@ const TYPE_MAP: Record<string, PieceType> = {
   k: 'king',
 }
 
-export default function ChessGame({ opponent, playerColor = 'white', gameMode = 'friend' }: ChessGameProps) {
+export default function ChessGame({
+  opponent,
+  playerColor = 'white',
+  gameMode = 'friend',
+  gameId,
+  initialFen,
+  onForfeit,
+  externalGameResult
+}: ChessGameProps) {
   // Chess.js instance (owns game rules)
-  const [chess] = useState(() => new Chess())
+  const [chess] = useState(() => {
+    const instance = new Chess()
+    if (initialFen) {
+      instance.load(initialFen)
+    }
+    return instance
+  })
 
   // Sound effects
   const { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound } = useChessSounds()
@@ -81,10 +104,84 @@ export default function ChessGame({ opponent, playerColor = 'white', gameMode = 
   const [blackTimeLeft, setBlackTimeLeft] = useState(600)
   const [timerActive, setTimerActive] = useState(false)
 
+  // Timer countdown for online games
+  useEffect(() => {
+    if (!opponent.isOnline || !timerActive || gameOver) return
+
+    const interval = setInterval(() => {
+      if (currentPlayer === 'white') {
+        setWhiteTimeLeft((prev) => {
+          if (prev <= 1) {
+            setTimerActive(false)
+            // Handle timeout - white loses
+            if (gameId) {
+              ;(async () => {
+                try {
+                  await supabase
+                    .from('games')
+                    .update({
+                      status: 'completed',
+                      result: 'black wins on time',
+                      winner: 'black',
+                    })
+                    .eq('id', gameId)
+                  setGameOver({ winner: 'black', reason: 'timeout' })
+                } catch (err) {
+                  console.error('Failed to update game on timeout:', err)
+                }
+              })()
+            }
+            return 0
+          }
+          return prev - 1
+        })
+      } else {
+        setBlackTimeLeft((prev) => {
+          if (prev <= 1) {
+            setTimerActive(false)
+            // Handle timeout - black loses
+            if (gameId) {
+              ;(async () => {
+                try {
+                  await supabase
+                    .from('games')
+                    .update({
+                      status: 'completed',
+                      result: 'white wins on time',
+                      winner: 'white',
+                    })
+                    .eq('id', gameId)
+                  setGameOver({ winner: 'white', reason: 'timeout' })
+                } catch (err) {
+                  console.error('Failed to update game on timeout:', err)
+                }
+              })()
+            }
+            return 0
+          }
+          return prev - 1
+        })
+      }
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [opponent.isOnline, timerActive, currentPlayer, gameOver, gameId])
+
   // Initialize board from chess.js
   useEffect(() => {
     updateBoardState()
   }, [])
+
+  // Handle external game result (opponent resigned, timeout, etc.)
+  useEffect(() => {
+    if (externalGameResult && !gameOver) {
+      setGameOver({
+        winner: externalGameResult.winner,
+        reason: externalGameResult.reason,
+      })
+      setTimerActive(false)
+    }
+  }, [externalGameResult, gameOver])
 
   // Convert chess.js board to our board state format
   const updateBoardState = useCallback(() => {
@@ -204,15 +301,25 @@ export default function ChessGame({ opponent, playerColor = 'white', gameMode = 
   useEffect(() => {
     const unsubscribe = opponent.onOpponentMove(async (move) => {
       try {
-        // Apply opponent's move using chess.js
-        chess.move({
-          from: move.from,
-          to: move.to,
-          promotion: move.promotion || 'q',
-        })
+        // For online games with FEN, load the FEN directly (server already validated)
+        // For offline games (bot/friend), apply the move using chess.js
+        if (opponent.isOnline && move.fen) {
+          chess.load(move.fen)
+        } else {
+          chess.move({
+            from: move.from,
+            to: move.to,
+            promotion: move.promotion || 'q',
+          })
+        }
 
         // Update board state
         updateBoardState()
+
+        // Clear any selected pieces or hints
+        setSelectedSquare(null)
+        setValidMoves([])
+        setHintSquares([])
 
         // Play appropriate sound
         if (chess.isCheckmate()) {
@@ -496,20 +603,41 @@ export default function ChessGame({ opponent, playerColor = 'white', gameMode = 
     setShowForfeitConfirm(true)
   }, [])
 
-  const handleForfeitConfirm = useCallback(() => {
-    if (!opponent.isOnline) return
+  const handleForfeitConfirm = useCallback(async () => {
+    if (!opponent.isOnline || !gameId) return
 
-    // Set game over with opponent as winner
-    setGameOver({
-      winner: playerColor === 'white' ? 'black' : 'white',
-      reason: 'forfeit',
-    })
     setShowForfeitConfirm(false)
-  }, [opponent.isOnline, playerColor])
+
+    try {
+      // Call resign-game API endpoint
+      await resignGame(gameId)
+
+      // Navigate to lobby immediately
+      if (onForfeit) {
+        onForfeit()
+      }
+    } catch (err) {
+      console.error('Failed to resign game:', err)
+      // Show error to user or retry
+      alert('Failed to resign game. Please try again.')
+      setShowForfeitConfirm(false)
+    }
+  }, [opponent.isOnline, gameId, onForfeit])
 
   const handleForfeitCancel = useCallback(() => {
     setShowForfeitConfirm(false)
   }, [])
+
+  // Handle game over modal button (Return to Lobby for online, Play Again for offline)
+  const handleGameOverAction = useCallback(() => {
+    if (opponent.isOnline && onForfeit) {
+      // For online games, navigate to lobby
+      onForfeit()
+    } else {
+      // For offline games, reset the board
+      handleResetConfirm()
+    }
+  }, [opponent.isOnline, onForfeit, handleResetConfirm])
 
   return (
     <div className="game-container">
@@ -620,7 +748,9 @@ export default function ChessGame({ opponent, playerColor = 'white', gameMode = 
         <GameOverModal
           winner={gameOver.winner}
           reason={gameOver.reason}
-          onReset={handleResetConfirm}
+          onReset={handleGameOverAction}
+          isOnline={opponent.isOnline}
+          playerColor={playerColor}
         />
       )}
 

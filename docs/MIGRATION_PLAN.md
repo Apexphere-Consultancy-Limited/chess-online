@@ -10,22 +10,29 @@
 
 ---
 
-## 🎯 Current Status (Updated 2025-10-13)
+## 🎯 Current Status (Updated 2025-10-18)
 
-**Phase 2 & 2.5: ✅ COMPLETED** - Unified offline game fully functional and deployed to production!
+**Phase 3: ✅ MAJOR PROGRESS** - Online game improvements and ready system implementation!
 
-**Achievements**:
-- ✅ Created unified `ChessGame` component
-- ✅ Implemented `useLocalOpponent` hook for bot & friend modes
-- ✅ All offline features working: undo, hints, reset, promotion, drag-and-drop
-- ✅ Fixed critical bugs: bot promotion, undo behavior, confirmations
-- ✅ Refactored `isThinking` to universal concept across all opponents
-- ✅ **Migrated production**: `pages/Game.tsx` now uses unified architecture
-- ✅ Reduced bundle size by 14KB
-- ✅ Created `docs/PHILOSOPHIES.md` documenting design principles
+**Recent Achievements** (Online Game Session):
+- ✅ **Forfeit/Resign**: Implemented `resignGame` API integration, players can forfeit and return to lobby
+- ✅ **Move Synchronization**: Fixed instant move sync by including FEN in broadcasts
+- ✅ **Game Over UX**: Shows "You Win!" / "You Lose!" instead of color names for online games
+- ✅ **Opponent Resignation Notification**: Real-time notification when opponent resigns
+- ✅ **Player Ready System**: Complete implementation with backend integration
+  - Both players navigate to game board on `game_ready` notification
+  - Beautiful `ReadyOverlay` component on game board
+  - Backend `player-ready` API integration
+  - 60-second timeout handling
+  - Real-time updates when opponent clicks ready
+- ✅ **Lobby Simplification**: Removed extra lobby rooms, kept only "main" lobby
+- ✅ **Backend Notifications**: Using proper backend notification system instead of frontend broadcasts
 
-**Current Phase**: Phase 3 - Online Mode Integration
-**Next**: Test unified ChessGame with online multiplayer
+**Current Phase**: Phase 3 - Online Mode Integration (Near Complete)
+**Next**: Fix ready timeout issue, complete online mode testing
+
+**Known Issues**:
+- ⚠️ Ready period (60 seconds) may expire before players click ready - needs investigation or timeout increase
 
 ---
 
@@ -402,53 +409,95 @@ Online mode timer synchronization will be handled in Phase 3 when integrating wi
 ### Phase 3: Online Mode Integration (CURRENT PHASE)
 **Goal**: Integrate ChessGame with online multiplayer using useSupabaseOpponent
 
-**Duration**: In Progress
+**Duration**: In Progress (Updated 2025-10-18)
 
-**Status**: 🚧 IN PROGRESS
+**Status**: 🚧 NEARLY COMPLETE (90% done)
 
-#### Completed Items:
+#### Completed Items (2025-10-18 Session):
 
-1. ✅ **Offline Polish**:
+1. ✅ **Offline Polish** (Previous):
    - ✅ Undo works correctly (2 moves for bot, 1 for friend)
    - ✅ Hints show gold squares
    - ✅ Bot thinking indicator working
    - ✅ Bot delay tuned to 1-2 seconds (natural feel)
 
-2. ✅ **Edge Cases**:
+2. ✅ **Edge Cases** (Previous):
    - ✅ Promotion working correctly
    - ✅ chess.js handles: en passant, castling, threefold repetition, insufficient material
    - ✅ Bot promotion bug fixed
 
-3. ✅ **Bot AI**:
+3. ✅ **Bot AI** (Previous):
    - ✅ All difficulty levels working (easy/medium/hard)
    - ✅ Bot thinking indicator (isThinking universal concept)
    - ✅ Artificial delay tuned perfectly
 
+4. ✅ **Online Game Improvements** (NEW - Today's Session):
+   - ✅ Forfeit/resign functionality with backend API
+   - ✅ Move synchronization fixed (FEN included in broadcasts)
+   - ✅ Game over modal shows "You Win!" / "You Lose!"
+   - ✅ Opponent resignation notification system
+   - ✅ External game result handling for remote game completion
+
+5. ✅ **Player Ready System** (NEW - Today's Session):
+   - ✅ Created `playerReady()` API function
+   - ✅ Created `ReadyOverlay` component for game board
+   - ✅ Both players navigate to game on `game_ready` notification
+   - ✅ Ready state tracking (white_ready, black_ready)
+   - ✅ "I'm Ready!" button for each player
+   - ✅ Waiting indicator when one player is ready
+   - ✅ "Game Starting!" animation when both ready
+   - ✅ 60-second timeout handling with error messages
+
+6. ✅ **Lobby Improvements** (NEW - Today's Session):
+   - ✅ Removed lobby tabs (only "main" lobby visible)
+   - ✅ Filtered lobby query to only fetch "main" lobby
+   - ✅ Cleaner UI without multiple lobby options
+
+#### Files Created/Modified Today:
+
+**New Files**:
+- `src/components/ReadyOverlay.tsx` - Ready confirmation UI on game board
+- `src/components/lobby/ReadyConfirmationModal.tsx` - (Deprecated, removed)
+
+**Modified Files**:
+- `src/hooks/useMakeMove.ts` - Added `playerReady()` and `resignGame()` functions
+- `src/hooks/useSupabaseOpponent.ts` - Fixed move sync to include FEN
+- `src/components/ChessGame.tsx` - Added external game result handling, forfeit API integration
+- `src/components/GameOverModal.tsx` - Added player-friendly win/loss messages
+- `src/pages/OnlineGamePage.tsx` - Added ReadyOverlay, timeout handling
+- `src/pages/Lobby.tsx` - Simplified to navigate both players on game_ready
+- `src/hooks/useLobby.ts` - Filtered to only "main" lobby
+- `src/components/lobby/LobbyHeader.tsx` - Hide tabs when only 1 lobby
+
 #### Remaining Tasks:
 
-1. **Online Mode Integration** (PRIORITY)
-   - [ ] Test ChessGame with useSupabaseOpponent
-   - [ ] Verify: move sync via realtime channels
-   - [ ] Handle: timer synchronization with database
-   - [ ] Verify: forfeit functionality
-   - [ ] Test: disconnection, reconnection, timeout
+1. **Ready System Timeout Issue** (CRITICAL)
+   - [ ] Investigate why 60-second timeout expires before players click ready
+   - [ ] Possible solutions:
+     - Ask backend to increase timeout to 120-180 seconds
+     - Optimize page loading time
+     - Add countdown timer visible to users
+   - [ ] Test with console logs to see game status on load
 
-2. **Timer Sync Decision**:
-   - Need to decide where timer sync logic lives
-   - Option A: Inside ChessGame (conditional for online mode)
-   - Option B: Inside useSupabaseOpponent (return timer state)
-   - Option C: Keep separate useOnlineTimer hook
+2. **Online Mode Testing**:
+   - [ ] Test full flow: Challenge → Accept → Ready → Play → Checkmate
+   - [ ] Test resignation flow
+   - [ ] Test timeout scenarios
+   - [ ] Test disconnection/reconnection
+   - [ ] Verify timer synchronization during gameplay
 
-3. **Online Experience**:
-   - [ ] Test full flow: Create game → Join → Play → End
-   - [ ] Verify "waiting for opponent" states
-   - [ ] Ensure last move highlighting works
-   - [ ] Test edge cases: timeout, forfeit, disconnection
+3. **Final Polish**:
+   - [ ] Test edge cases: stalemate, draw by repetition
+   - [ ] Verify all special moves work online (castling, en passant)
+   - [ ] Test promotion during online game
+   - [ ] Ensure smooth UX throughout
 
 **Deliverables**:
-- [ ] Online mode fully functional with ChessGame
-- [ ] Timer sync working
-- [ ] All opponent types tested and working
+- ✅ Resign functionality working
+- ✅ Move sync working instantly
+- ✅ Ready system implemented
+- ⚠️ Ready timeout issue needs resolution
+- [ ] Complete online flow tested end-to-end
 - [ ] Ready for final migration
 
 ---

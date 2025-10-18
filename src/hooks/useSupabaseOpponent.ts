@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useRef } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../lib/supabaseClient'
 import { makeMove } from './useMakeMove'
@@ -15,32 +15,25 @@ import type { GameOpponent, OpponentMove } from '../types/gameOpponent'
  */
 export function useSupabaseOpponent(gameId: string): GameOpponent {
   const { user } = useAuth()
-  const [moveCallbacks, setMoveCallbacks] = useState<Array<(move: OpponentMove) => void>>([])
-  const channelRef = useRef<ReturnType<typeof useGameRealtime>>(null)
+  const moveCallbacksRef = useRef<Array<(move: OpponentMove) => void>>([])
 
-  // Handle incoming moves from realtime channel
-  const handleRealtimeMove = (payload: any) => {
-    // Extract just the move data - nothing else!
+  // Handle incoming moves from realtime channel (stable reference using useCallback)
+  const handleRealtimeMove = useCallback((payload: any) => {
+    // For online games, we get the FEN after the move
+    // We need to extract the move from the database payload
     const move: OpponentMove = {
       from: payload.from_square || '',
       to: payload.to_square || '',
       promotion: payload.promotion,
+      fen: payload.fen_after, // Include FEN for game state sync
     }
 
-    // Notify all subscribers
-    moveCallbacks.forEach(callback => callback(move))
-  }
+    // Notify all subscribers using ref (doesn't cause re-renders)
+    moveCallbacksRef.current.forEach(callback => callback(move))
+  }, [])
 
-  // Subscribe to realtime updates
-  useEffect(() => {
-    channelRef.current = useGameRealtime(gameId, handleRealtimeMove)
-
-    return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current)
-      }
-    }
-  }, [gameId])
+  // Subscribe to realtime updates (call hook at top level, not inside useEffect)
+  const channel = useGameRealtime(gameId, handleRealtimeMove)
 
   const opponent: GameOpponent = {
     sendMove: async (move: OpponentMove) => {
@@ -49,17 +42,18 @@ export function useSupabaseOpponent(gameId: string): GameOpponent {
       }
 
       // Send to server for validation and storage
-      await makeMove(gameId, move.from, move.to, move.promotion)
+      const response = await makeMove(gameId, move.from, move.to, move.promotion)
 
       // Broadcast to opponent via realtime (for instant feedback)
-      if (channelRef.current && channelRef.current.state === 'joined') {
-        await channelRef.current.send({
+      if (channel && channel.state === 'joined') {
+        await channel.send({
           type: 'broadcast',
           event: 'move',
           payload: {
             from_square: move.from,
             to_square: move.to,
             promotion: move.promotion,
+            fen_after: response.move.fen, // Include FEN from server response
             player_id: user.id,
           },
         })
@@ -67,20 +61,19 @@ export function useSupabaseOpponent(gameId: string): GameOpponent {
     },
 
     onOpponentMove: (callback: (move: OpponentMove) => void) => {
-      setMoveCallbacks(prev => [...prev, callback])
+      moveCallbacksRef.current.push(callback)
 
       // Return unsubscribe function
       return () => {
-        setMoveCallbacks(prev => prev.filter(cb => cb !== callback))
+        moveCallbacksRef.current = moveCallbacksRef.current.filter(cb => cb !== callback)
       }
     },
 
     disconnect: () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current)
-        channelRef.current = null
+      if (channel) {
+        supabase.removeChannel(channel)
       }
-      setMoveCallbacks([])
+      moveCallbacksRef.current = []
     },
 
     isOnline: true,

@@ -7,6 +7,7 @@ import LearningMode from './pages/LearningMode'
 import TestGame from './pages/TestGame'
 import { AuthProvider } from './auth/AuthProvider'
 import OnlineRouter from './pages/OnlineRouter'
+import OnlineGamePage from './pages/OnlineGamePage'
 import RequireAuth from './auth/RequireAuth'
 
 function App() {
@@ -30,7 +31,7 @@ function App() {
             path="/online/:gameId"
             element={
               <RequireAuth>
-                <Game />
+                <OnlineGamePage />
               </RequireAuth>
             }
           />

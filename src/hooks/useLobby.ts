@@ -35,6 +35,8 @@ type CancelChallengeResponse = {
 
 interface UseLobbyOptions {
   onChallengeChange?: (payload: RealtimePostgresChangesPayload<LobbyChallenge>) => void
+  onChallengeAccepted?: (gameId: string, opponentName: string) => void
+  onPlayerReady?: (gameId: string) => void
 }
 
 interface UseLobbyResult {
@@ -51,6 +53,7 @@ interface UseLobbyResult {
   respondToChallenge: (input: { challengeId: string; action: 'accept' | 'decline' }) => Promise<RespondToChallengeResponse | null>
   cancelChallenge: (challengeId: string) => Promise<void>
   leaveLobby: (keepalive?: boolean) => Promise<void>
+  broadcastReady: (gameId: string, opponentId: string) => Promise<void>
 }
 
 async function fetchProfiles(profileIds: string[]) {
@@ -89,6 +92,8 @@ export function useLobby(options?: UseLobbyOptions): UseLobbyResult {
   const heartbeatRef = useRef<number | null>(null)
   const initializedRef = useRef(false)
   const challengeChangeRef = useRef<UseLobbyOptions['onChallengeChange']>(options?.onChallengeChange)
+  const challengeAcceptedRef = useRef<UseLobbyOptions['onChallengeAccepted']>(options?.onChallengeAccepted)
+  const playerReadyRef = useRef<UseLobbyOptions['onPlayerReady']>(options?.onPlayerReady)
   const challengesRefreshingRef = useRef(false)
   const challengesRefreshPendingRef = useRef(false)
   const lastChallengeUpdateRef = useRef<{ id: string; timestamp: number } | null>(null)
@@ -102,10 +107,14 @@ export function useLobby(options?: UseLobbyOptions): UseLobbyResult {
 
   useEffect(() => {
     challengeChangeRef.current = options?.onChallengeChange
+    challengeAcceptedRef.current = options?.onChallengeAccepted
+    playerReadyRef.current = options?.onPlayerReady
     return () => {
       challengeChangeRef.current = undefined
+      challengeAcceptedRef.current = undefined
+      playerReadyRef.current = undefined
     }
-  }, [options?.onChallengeChange])
+  }, [options?.onChallengeChange, options?.onChallengeAccepted, options?.onPlayerReady])
 
   const setStatus = useCallback(
     async (nextStatus: LobbySessionStatus) => {
@@ -333,9 +342,42 @@ export function useLobby(options?: UseLobbyOptions): UseLobbyResult {
         }
       })
 
-      channel.on('broadcast', { event: 'challenge_response' }, ({ payload }) => {
+      channel.on('broadcast', { event: 'challenge_response' }, async ({ payload }) => {
         if (userId && payload.challenger_id === userId) {
           void refreshChallenges()
+
+          // If challenge was accepted, fetch the game and opponent name
+          if (payload.action === 'accepted' && challengeAcceptedRef.current) {
+            try {
+              // Query the challenge to get the game_id and opponent profile
+              const { data: challengeData } = await supabase
+                .from('challenges')
+                .select('game_id, challenged_id')
+                .eq('id', payload.challenge_id)
+                .single()
+
+              if (challengeData?.game_id && challengeData.challenged_id) {
+                // Fetch opponent's profile
+                const { data: profileData } = await supabase
+                  .from('profiles')
+                  .select('username')
+                  .eq('id', challengeData.challenged_id)
+                  .single()
+
+                const opponentName = profileData?.username || 'Opponent'
+                challengeAcceptedRef.current(challengeData.game_id, opponentName)
+              }
+            } catch (err) {
+              console.error('Failed to get game ID from accepted challenge:', err)
+            }
+          }
+        }
+      })
+
+      channel.on('broadcast', { event: 'player_ready' }, ({ payload }) => {
+        if (userId && payload.opponent_id === userId && playerReadyRef.current) {
+          // The opponent is ready, navigate to the game
+          playerReadyRef.current(payload.game_id)
         }
       })
 
@@ -372,6 +414,7 @@ export function useLobby(options?: UseLobbyOptions): UseLobbyResult {
       const { data: lobbyRecords, error: lobbyError } = await supabase
         .from('lobbies')
         .select('*')
+        .eq('slug', 'main') // Only show main lobby
         .order('min_elo', { ascending: true })
       if (lobbyError) {
         throw lobbyError
@@ -603,6 +646,22 @@ export function useLobby(options?: UseLobbyOptions): UseLobbyResult {
     [challenges, currentLobby, refreshChallenges, refreshSessions],
   )
 
+  const broadcastReady = useCallback(
+    async (gameId: string, opponentId: string) => {
+      if (lobbyChannelRef.current) {
+        await lobbyChannelRef.current.send({
+          type: 'broadcast',
+          event: 'player_ready',
+          payload: {
+            game_id: gameId,
+            opponent_id: opponentId,
+          },
+        })
+      }
+    },
+    [],
+  )
+
   const value = useMemo<UseLobbyResult>(
     () => ({
       loading,
@@ -618,6 +677,7 @@ export function useLobby(options?: UseLobbyOptions): UseLobbyResult {
       respondToChallenge,
       cancelChallenge,
       leaveLobby,
+      broadcastReady,
     }),
     [
       challenges,
@@ -633,6 +693,7 @@ export function useLobby(options?: UseLobbyOptions): UseLobbyResult {
       switchLobby,
       createChallenge,
       cancelChallenge,
+      broadcastReady,
     ],
   )
 
