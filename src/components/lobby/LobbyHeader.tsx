@@ -41,11 +41,13 @@ function LobbyHeader({
         </div>
       </div>
 
-      <LobbyTabs
-        lobbies={lobbies}
-        activeLobbyId={currentLobby?.id}
-        onSelect={onSwitchLobby}
-      />
+      {lobbies.length > 1 && (
+        <LobbyTabs
+          lobbies={lobbies}
+          activeLobbyId={currentLobby?.id}
+          onSelect={onSwitchLobby}
+        />
+      )}
     </header>
   )
 }

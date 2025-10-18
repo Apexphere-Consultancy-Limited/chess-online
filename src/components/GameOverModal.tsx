@@ -4,12 +4,26 @@ interface GameOverModalProps {
   winner: PieceColor | 'draw'
   reason: string
   onReset: () => void
+  isOnline?: boolean // For online games, show "Return to Lobby" instead of "Play Again"
+  playerColor?: PieceColor // For online games, to determine "You Win" vs "You Lose"
 }
 
-export default function GameOverModal({ winner, reason, onReset }: GameOverModalProps) {
+export default function GameOverModal({ winner, reason, onReset, isOnline = false, playerColor }: GameOverModalProps) {
   const isDraw = winner === 'draw'
-  const winnerText = isDraw ? 'Draw!' : `${winner.charAt(0).toUpperCase() + winner.slice(1)} Wins!`
+
+  // For online games, show "You Win!" or "You Lose!"
+  // For offline games, show the color that won
+  let winnerText: string
+  if (isDraw) {
+    winnerText = 'Draw!'
+  } else if (isOnline && playerColor) {
+    winnerText = winner === playerColor ? 'You Win!' : 'You Lose!'
+  } else {
+    winnerText = `${winner.charAt(0).toUpperCase() + winner.slice(1)} Wins!`
+  }
+
   const subtitle = isDraw ? `Game ended in ${reason}` : `Victory by ${reason}`
+  const buttonText = isOnline ? 'Return to Lobby' : 'Play Again'
 
   // Create fireworks elements
   const fireworks = Array.from({ length: 20 }, (_, i) => (
@@ -42,7 +56,7 @@ export default function GameOverModal({ winner, reason, onReset }: GameOverModal
         </div>
       </div>
       <button onClick={onReset} className="play-again-btn">
-        Play Again
+        {buttonText}
       </button>
     </div>
   )

@@ -1,15 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
+import { Chess } from 'chess.js'
 import GameModeModal from '../components/GameModeModal'
-import PromotionModal from '../components/PromotionModal'
-import GameOverModal from '../components/GameOverModal'
-import ChessBoard from '../components/ChessBoard'
-import CapturedPieces from '../components/CapturedPieces'
-import MoveHistory from '../components/MoveHistory'
-import GameControls from '../components/GameControls'
-import Timer from '../components/Timer'
-import BotChat from '../components/BotChat'
-import { useMoveRules } from '../hooks/useMoveRules'
+import ChessGame from '../components/ChessGame'
+import { useLocalOpponent } from '../hooks/useLocalOpponent'
+import type { OpponentConfig } from '../types/gameOpponent'
 import NavBar from '../components/NavBar'
 import OnlineGame from '../components/OnlineGame'
 import { useAuth } from '../auth/AuthProvider'
@@ -50,6 +45,8 @@ function Game() {
 
 function LocalGame() {
   const [showNavbar, setShowNavbar] = useState(true)
+  const [showModal, setShowModal] = useState(true)
+  const [opponentConfig, setOpponentConfig] = useState<Exclude<OpponentConfig, { type: 'online' }> | null>(null)
 
   useEffect(() => {
     // Auto-hide navbar after 3 seconds
@@ -62,39 +59,91 @@ function LocalGame() {
     }
   }, [])
 
-  const {
-    boardState,
-    currentPlayer,
-    capturedPieces,
-    score,
-    moveHistory,
-    showModal,
-    hintsRemaining,
-    selectedSquare,
-    validMoves,
-    draggedPiece,
-    promotionData,
-    gameOver,
-    inCheck,
-    isComputerThinking,
-    lastMove,
-    whiteTimeLeft,
-    blackTimeLeft,
-    timerActive,
-    hintSquares,
-    gameMode,
-    handleSquareClick,
-    handleDragStart,
-    handleDragOver,
-    handleDrop,
-    handleDragEnd,
-    handlePromotion,
-    handleUndo,
-    handleHint,
-    handleReset,
-    setGameMode,
-    setShowModal,
-  } = useMoveRules()
+  // If no game mode selected, show modal
+  if (!opponentConfig) {
+    return (
+      <>
+        {/* Auto-hide top navigation */}
+        <div className={`game-top-nav ${showNavbar ? 'show' : ''}`}>
+          <NavBar />
+        </div>
+
+        {showModal && (
+          <GameModeModal
+            onSelectMode={(mode) => {
+              // Convert game mode to opponent config
+              if (mode === 'friend') {
+                setOpponentConfig({ type: 'friend' })
+              } else if (mode === 'ai-easy') {
+                setOpponentConfig({ type: 'bot', difficulty: 'easy' })
+              } else if (mode === 'ai-medium') {
+                setOpponentConfig({ type: 'bot', difficulty: 'medium' })
+              } else if (mode === 'ai-hard') {
+                setOpponentConfig({ type: 'bot', difficulty: 'hard' })
+              }
+              setShowModal(false)
+            }}
+            onClose={() => setShowModal(false)}
+          />
+        )}
+      </>
+    )
+  }
+
+  return <GameView config={opponentConfig} />
+}
+
+// Separate component to avoid conditional hook calls
+function GameView({
+  config
+}: {
+  config: Exclude<OpponentConfig, { type: 'online' }>
+}) {
+  const [showNavbar, setShowNavbar] = useState(true)
+  const [chessInstance] = useState(() => new Chess())
+  const [boardState] = useState(() => {
+    // Initialize 8x8 board from chess.js
+    const board = Array(8).fill(null).map(() => Array(8).fill(null))
+    const fen = chessInstance.fen()
+    const rows = fen.split(' ')[0].split('/')
+
+    rows.forEach((row, rowIndex) => {
+      let colIndex = 0
+      for (const char of row) {
+        if (char >= '1' && char <= '8') {
+          colIndex += parseInt(char)
+        } else {
+          board[rowIndex][colIndex] = char
+          colIndex++
+        }
+      }
+    })
+
+    return board
+  })
+
+  useEffect(() => {
+    // Auto-hide navbar after 3 seconds
+    const timer = setTimeout(() => {
+      setShowNavbar(false)
+    }, 3000)
+
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [])
+
+  // Create opponent using unified hook
+  const opponent = useLocalOpponent(config, boardState, chessInstance)
+
+  // Determine game mode for ChessGame component
+  const gameMode = config.type === 'friend'
+    ? 'friend'
+    : config.difficulty === 'easy'
+      ? 'ai-easy'
+      : config.difficulty === 'medium'
+        ? 'ai-medium'
+        : 'ai-hard'
 
   return (
     <>
@@ -103,109 +152,11 @@ function LocalGame() {
         <NavBar />
       </div>
 
-      {showModal && (
-        <GameModeModal
-          onSelectMode={(mode) => {
-            setGameMode(mode)
-            setShowModal(false)
-          }}
-          onClose={() => setShowModal(false)}
-        />
-      )}
-
-      {promotionData && (
-        <PromotionModal
-          color={promotionData.color}
-          onSelect={handlePromotion}
-        />
-      )}
-
-      {gameOver && (
-        <GameOverModal
-          winner={gameOver.winner}
-          reason={gameOver.reason}
-          onReset={handleReset}
-        />
-      )}
-
-      <div className="game-container">
-        <div className="game-layout">
-          {/* Left Side: Captured Pieces */}
-          <div className="left-side-panel">
-            <CapturedPieces
-              color="black"
-              capturedPieces={capturedPieces.black}
-              score={score.black}
-            />
-            <CapturedPieces
-              color="white"
-              capturedPieces={capturedPieces.white}
-              score={score.white}
-            />
-          </div>
-
-          {/* Center: Chess Board */}
-          <div className="board-container">
-            <div className="board-wrapper">
-              <ChessBoard
-                boardState={boardState}
-                selectedSquare={selectedSquare}
-                validMoves={validMoves}
-                draggedPiece={draggedPiece}
-                lastMove={lastMove}
-                hintSquares={hintSquares}
-                onSquareClick={handleSquareClick}
-                onDragStart={handleDragStart}
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-                onDragEnd={handleDragEnd}
-              />
-            </div>
-          </div>
-
-          {/* Right Side: Timers/Bot Chat and Move History */}
-          <div className="right-side-panel">
-            {gameMode === 'friend' ? (
-              <div className="timers-container">
-                <Timer
-                  color="black"
-                  timeLeft={blackTimeLeft}
-                  isActive={timerActive && currentPlayer === 'black'}
-                />
-                <Timer
-                  color="white"
-                  timeLeft={whiteTimeLeft}
-                  isActive={timerActive && currentPlayer === 'white'}
-                />
-              </div>
-            ) : (
-              <BotChat
-                moveCount={moveHistory.length}
-                lastMove={moveHistory[moveHistory.length - 1] || ''}
-                currentPlayer={currentPlayer}
-                gameOver={!!gameOver}
-                winner={gameOver?.winner || null}
-                gameMode={gameMode}
-                inCheck={inCheck}
-                lastMoveCapture={moveHistory.length > 0 && moveHistory[moveHistory.length - 1]?.captured !== undefined}
-                isComputerThinking={isComputerThinking}
-              />
-            )}
-            <div className="move-history-panel">
-              <MoveHistory moves={moveHistory} />
-            </div>
-
-            {/* Game Controls under Move History */}
-            <GameControls
-              onUndo={handleUndo}
-              onHint={handleHint}
-              onReset={handleReset}
-              canUndo={moveHistory.length > 0}
-              gameMode={gameMode}
-            />
-          </div>
-        </div>
-      </div>
+      <ChessGame
+        opponent={opponent}
+        playerColor="white"
+        gameMode={gameMode}
+      />
     </>
   )
 }
