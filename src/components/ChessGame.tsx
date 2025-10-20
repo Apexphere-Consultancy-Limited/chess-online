@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { Chess } from 'chess.js'
 import type { GameOpponent } from '../types/gameOpponent'
 import { useChessSounds } from '../hooks/useChessSounds'
+import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../lib/supabaseClient'
 import { resignGame } from '../hooks/useMakeMove'
 import ChessBoard from './ChessBoard'
@@ -61,13 +62,11 @@ export default function ChessGame({
   externalGameResult
 }: ChessGameProps) {
   // Chess.js instance (owns game rules)
-  const [chess] = useState(() => {
-    const instance = new Chess()
-    if (initialFen) {
-      instance.load(initialFen)
-    }
-    return instance
-  })
+  const [chess] = useState(() => new Chess())
+  const [historyLoaded, setHistoryLoaded] = useState(false)
+
+  // Auth (for checking if move is ours in online games)
+  const { user } = useAuth()
 
   // Sound effects
   const { playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound } = useChessSounds()
@@ -167,73 +166,6 @@ export default function ChessGame({
     return () => clearInterval(interval)
   }, [opponent.isOnline, timerActive, currentPlayer, gameOver, gameId])
 
-  // Initialize board from chess.js
-  useEffect(() => {
-    updateBoardState()
-  }, [])
-
-  // Handle external game result (opponent resigned, timeout, etc.)
-  useEffect(() => {
-    if (externalGameResult && !gameOver) {
-      setGameOver({
-        winner: externalGameResult.winner,
-        reason: externalGameResult.reason,
-      })
-      setTimerActive(false)
-    }
-  }, [externalGameResult, gameOver])
-
-  // Convert chess.js board to our board state format
-  const updateBoardState = useCallback(() => {
-    const board = chess.board()
-    const newBoardState: BoardState = []
-
-    for (let row = 0; row < 8; row++) {
-      const boardRow: (PieceSymbol | null)[] = []
-      for (let col = 0; col < 8; col++) {
-        const piece = board[row][col]
-        if (piece) {
-          const color = piece.color === 'w' ? 'white' : 'black'
-          const type = TYPE_MAP[piece.type]
-          if (type) {
-            boardRow.push(PIECES[color][type])
-          } else {
-            boardRow.push(null)
-          }
-        } else {
-          boardRow.push(null)
-        }
-      }
-      newBoardState.push(boardRow)
-    }
-
-    setBoardState(newBoardState)
-    setCurrentPlayer(chess.turn() === 'w' ? 'white' : 'black')
-
-    // Update move history
-    const history = chess.history({ verbose: true })
-    const formattedMoves: Move[] = history.map((move) => {
-      const piece = PIECES[move.color === 'w' ? 'white' : 'black'][TYPE_MAP[move.piece]]
-      const fromCol = move.from.charCodeAt(0) - 97
-      const fromRow = 8 - parseInt(move.from[1])
-      const toCol = move.to.charCodeAt(0) - 97
-      const toRow = 8 - parseInt(move.to[1])
-
-      return {
-        piece,
-        notation: move.san,
-        from: { row: fromRow, col: fromCol },
-        to: { row: toRow, col: toCol },
-        timestamp: Date.now(),
-        ...(move.captured && { captured: PIECES[move.color === 'w' ? 'black' : 'white'][TYPE_MAP[move.captured]] }),
-      }
-    })
-    setMoveHistory(formattedMoves)
-
-    // Update captured pieces and score
-    updateCapturedPieces(board)
-  }, [chess])
-
   // Update captured pieces
   const updateCapturedPieces = useCallback((board: any) => {
     const whiteCaptured: PieceSymbol[] = []
@@ -297,24 +229,288 @@ export default function ChessGame({
     setScore({ white: whiteScore, black: blackScore })
   }, [])
 
-  // Subscribe to opponent moves
-  useEffect(() => {
-    const unsubscribe = opponent.onOpponentMove(async (move) => {
-      try {
-        // For online games with FEN, load the FEN directly (server already validated)
-        // For offline games (bot/friend), apply the move using chess.js
-        if (opponent.isOnline && move.fen) {
-          chess.load(move.fen)
+  // ===== NEW DECOUPLED UPDATE FUNCTIONS =====
+
+  /**
+   * Update ONLY the visual board position from a FEN string
+   * NO side effects on move history
+   * Use for: Online games receiving broadcast/database events
+   */
+  const updateBoardPosition = useCallback((fen: string) => {
+    chess.load(fen)
+    const board = chess.board()
+    const newBoardState: BoardState = []
+
+    for (let row = 0; row < 8; row++) {
+      const boardRow: (PieceSymbol | null)[] = []
+      for (let col = 0; col < 8; col++) {
+        const piece = board[row][col]
+        if (piece) {
+          const color = piece.color === 'w' ? 'white' : 'black'
+          const type = TYPE_MAP[piece.type]
+          if (type) {
+            boardRow.push(PIECES[color][type])
+          } else {
+            boardRow.push(null)
+          }
         } else {
+          boardRow.push(null)
+        }
+      }
+      newBoardState.push(boardRow)
+    }
+
+    setBoardState(newBoardState)
+    setCurrentPlayer(chess.turn() === 'w' ? 'white' : 'black')
+    updateCapturedPieces(board)
+  }, [chess, updateCapturedPieces])
+
+  /**
+   * Append ONLY a single move to history from database metadata
+   * NO side effects on board position
+   * Use for: Online games receiving database INSERT events
+   */
+  const appendMoveToHistory = useCallback((moveData: {
+    from_square: string
+    to_square: string
+    san_notation: string
+    piece: string
+    captured_piece?: string
+    promotion?: string
+    move_number: number
+  }) => {
+    const fromCol = moveData.from_square.charCodeAt(0) - 97
+    const fromRow = 8 - parseInt(moveData.from_square[1])
+    const toCol = moveData.to_square.charCodeAt(0) - 97
+    const toRow = 8 - parseInt(moveData.to_square[1])
+
+    const pieceType = TYPE_MAP[moveData.piece.toLowerCase()]
+    const moveColor = moveData.move_number % 2 === 1 ? 'white' : 'black'
+    const piece = PIECES[moveColor][pieceType]
+
+    const formattedMove: Move = {
+      piece,
+      notation: moveData.san_notation,
+      from: { row: fromRow, col: fromCol },
+      to: { row: toRow, col: toCol },
+      timestamp: Date.now(),
+      ...(moveData.captured_piece && {
+        captured: PIECES[moveColor === 'white' ? 'black' : 'white'][TYPE_MAP[moveData.captured_piece.toLowerCase()]]
+      })
+    }
+
+    setMoveHistory(prev => {
+      // Deduplicate: Check if this exact move already exists (same notation and position)
+      const isDuplicate = prev.some(existingMove =>
+        existingMove.notation === formattedMove.notation &&
+        existingMove.from.row === formattedMove.from.row &&
+        existingMove.from.col === formattedMove.from.col &&
+        existingMove.to.row === formattedMove.to.row &&
+        existingMove.to.col === formattedMove.to.col
+      )
+
+      if (isDuplicate) {
+        return prev
+      }
+
+      return [...prev, formattedMove]
+    })
+  }, [])
+
+  /**
+   * Update BOTH board and history from chess.js instance
+   * ONLY for offline games where chess.js is the source of truth
+   * Use for: Offline games (vs friend, vs bot)
+   */
+  const updateBoardAndHistory = useCallback(() => {
+    const board = chess.board()
+    const newBoardState: BoardState = []
+
+    for (let row = 0; row < 8; row++) {
+      const boardRow: (PieceSymbol | null)[] = []
+      for (let col = 0; col < 8; col++) {
+        const piece = board[row][col]
+        if (piece) {
+          const color = piece.color === 'w' ? 'white' : 'black'
+          const type = TYPE_MAP[piece.type]
+          if (type) {
+            boardRow.push(PIECES[color][type])
+          } else {
+            boardRow.push(null)
+          }
+        } else {
+          boardRow.push(null)
+        }
+      }
+      newBoardState.push(boardRow)
+    }
+
+    setBoardState(newBoardState)
+    setCurrentPlayer(chess.turn() === 'w' ? 'white' : 'black')
+
+    // Rebuild history from chess.js
+    const history = chess.history({ verbose: true })
+    const formattedMoves: Move[] = history.map((move) => {
+      const piece = PIECES[move.color === 'w' ? 'white' : 'black'][TYPE_MAP[move.piece]]
+      const fromCol = move.from.charCodeAt(0) - 97
+      const fromRow = 8 - parseInt(move.from[1])
+      const toCol = move.to.charCodeAt(0) - 97
+      const toRow = 8 - parseInt(move.to[1])
+
+      return {
+        piece,
+        notation: move.san,
+        from: { row: fromRow, col: fromCol },
+        to: { row: toRow, col: toCol },
+        timestamp: Date.now(),
+        ...(move.captured && { captured: PIECES[move.color === 'w' ? 'black' : 'white'][TYPE_MAP[move.captured]] }),
+      }
+    })
+    setMoveHistory(formattedMoves)
+
+    updateCapturedPieces(board)
+  }, [chess, updateCapturedPieces])
+
+  // Load move history from database for online games
+  useEffect(() => {
+    if (!opponent.isOnline || !gameId || historyLoaded) return
+
+    async function loadMoveHistory() {
+      try {
+        // Load all moves for this game, ordered by move number
+        const { data: moves, error } = await supabase
+          .from('moves')
+          .select('*')
+          .eq('game_id', gameId)
+          .order('move_number', { ascending: true })
+
+        if (error) {
+          console.error('Failed to load move history:', error)
+          return
+        }
+
+        if (!moves || moves.length === 0) {
+          console.log('[ChessGame] No move history to load')
+          setHistoryLoaded(true)
+          // No moves yet, just show initial position
+          if (initialFen) {
+            updateBoardPosition(initialFen)
+          } else {
+            updateBoardPosition(chess.fen())
+          }
+          return
+        }
+
+        console.log(`[ChessGame] Loading ${moves.length} historical moves`)
+
+        // Get final position from last move's FEN
+        const finalFen = moves[moves.length - 1].fen_after
+
+        // Update board to final position
+        updateBoardPosition(finalFen)
+
+        // Build history from database moves
+        moves.forEach(move => {
+          appendMoveToHistory({
+            from_square: move.from_square,
+            to_square: move.to_square,
+            san_notation: move.san_notation,
+            piece: move.piece,
+            captured_piece: move.captured_piece,
+            promotion: move.promotion,
+            move_number: move.move_number
+          })
+        })
+
+        console.log('[ChessGame] Move history loaded successfully')
+        setHistoryLoaded(true)
+      } catch (err) {
+        console.error('Failed to load move history:', err)
+        // Fallback to loading FEN if history load fails
+        if (initialFen) {
+          updateBoardPosition(initialFen)
+        } else {
+          updateBoardPosition(chess.fen())
+        }
+        setHistoryLoaded(true)
+      }
+    }
+
+    loadMoveHistory()
+  }, [opponent.isOnline, gameId, historyLoaded, initialFen, chess, updateBoardPosition, appendMoveToHistory])
+
+  // Initialize board from chess.js (for offline games)
+  useEffect(() => {
+    if (!opponent.isOnline) {
+      updateBoardAndHistory()
+    }
+  }, [opponent.isOnline, updateBoardAndHistory])
+
+  // Handle external game result (opponent resigned, timeout, etc.)
+  useEffect(() => {
+    if (externalGameResult && !gameOver) {
+      setGameOver({
+        winner: externalGameResult.winner,
+        reason: externalGameResult.reason,
+      })
+      setTimerActive(false)
+    }
+  }, [externalGameResult, gameOver])
+
+  // Subscribe to opponent moves - only run once on mount
+  useEffect(() => {
+    console.log('[ChessGame] Setting up opponent move subscription')
+
+    const unsubscribe = opponent.onOpponentMove(async (move) => {
+      console.log('[ChessGame] Received move event:', { source: move.source, from: move.from, to: move.to, player_id: move.player_id })
+
+      const isOwnMove = user && move.player_id === user.id
+
+      try {
+        // For online games: Two types of events
+        // 1. 'database' - Database INSERT with full metadata (for history)
+        // 2. 'broadcast' - Real-time broadcast for instant board sync
+        if (opponent.isOnline && move.fen) {
+
+          // For database INSERTs: Append to history and update board (fallback)
+          if (move.source === 'database' && move.san_notation) {
+            console.log('[ChessGame] Database INSERT - Adding to history:', move.san_notation, isOwnMove ? '(own move)' : '(opponent move)')
+
+            // Always append to history (both own and opponent moves)
+            // This is the authoritative source for move history
+            appendMoveToHistory({
+              from_square: move.from_square || '',
+              to_square: move.to_square || '',
+              san_notation: move.san_notation,
+              piece: move.piece || 'p',
+              captured_piece: move.captured_piece,
+              promotion: move.promotion,
+              move_number: move.move_number || 1
+            })
+
+            // Only update board for opponent moves (our own board was already updated in applyMove)
+            if (!isOwnMove) {
+              updateBoardPosition(move.fen)
+            }
+          }
+          // For broadcasts: Update board immediately for real-time sync
+          else if (move.source === 'broadcast') {
+            console.log('[ChessGame] Broadcast - Board sync only (history comes from database)')
+            updateBoardPosition(move.fen)
+          }
+        } else {
+          // Offline games: use chess.move() which preserves history
           chess.move({
             from: move.from,
             to: move.to,
             promotion: move.promotion || 'q',
           })
+
+          // Update board state with history rebuild from chess.js
+          updateBoardAndHistory()
         }
 
-        // Update board state
-        updateBoardState()
+        console.log('[ChessGame] Board updated after move')
 
         // Clear any selected pieces or hints
         setSelectedSquare(null)
@@ -340,8 +536,12 @@ export default function ChessGame({
       }
     })
 
-    return unsubscribe
-  }, [opponent, chess, updateBoardState, playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound])
+    return () => {
+      console.log('[ChessGame] Cleaning up opponent move subscription')
+      unsubscribe()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Convert row/col to algebraic notation (e.g., e2)
   const toAlgebraic = useCallback((row: number, col: number) => {
@@ -381,8 +581,19 @@ export default function ChessGame({
           return
         }
 
-        // Update board state
-        updateBoardState()
+        const newFen = chess.fen()
+
+        // For online games: Update board only (history comes from database INSERT)
+        // For offline games: Update both board and history from chess.js
+        if (opponent.isOnline) {
+          // Update board position immediately (optimistic update)
+          updateBoardPosition(newFen)
+          // DO NOT update history - database INSERT will trigger appendMoveToHistory
+        } else {
+          // Offline games: rebuild both from chess.js
+          updateBoardAndHistory()
+        }
+
         setLastMove({ from: { row: fromRow, col: fromCol }, to: { row: toRow, col: toCol } })
 
         // Send move to opponent (include FEN for bot to calculate from correct position)
@@ -390,7 +601,7 @@ export default function ChessGame({
           from,
           to,
           promotion: promotionPiece?.charAt(0),
-          fen: chess.fen(), // Current position after the move
+          fen: newFen, // Current position after the move
         })
 
         // Check game state and play sounds
@@ -420,7 +631,7 @@ export default function ChessGame({
         console.error('Failed to apply move:', error)
       }
     },
-    [chess, toAlgebraic, updateBoardState, opponent, playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound]
+    [chess, toAlgebraic, updateBoardPosition, updateBoardAndHistory, opponent, playMoveSound, playCaptureSound, playCheckSound, playCheckmateSound]
   )
 
   // Handle square click
@@ -544,12 +755,12 @@ export default function ChessGame({
       chess.undo()
     }
 
-    updateBoardState()
+    updateBoardAndHistory()
     setSelectedSquare(null)
     setValidMoves([])
     setHintSquares([])
     setLastMove(null) // Clear last move highlight
-  }, [chess, opponent.isOnline, gameMode, updateBoardState])
+  }, [chess, opponent.isOnline, gameMode, updateBoardAndHistory])
 
   // Handle hint (offline only)
   const handleHint = useCallback(() => {
@@ -581,7 +792,7 @@ export default function ChessGame({
 
   const handleResetConfirm = useCallback(() => {
     chess.reset()
-    updateBoardState()
+    updateBoardAndHistory()
     setSelectedSquare(null)
     setValidMoves([])
     setHintSquares([])
@@ -592,7 +803,7 @@ export default function ChessGame({
     setWhiteTimeLeft(600)
     setBlackTimeLeft(600)
     setShowResetConfirm(false)
-  }, [chess, updateBoardState])
+  }, [chess, updateBoardAndHistory])
 
   const handleResetCancel = useCallback(() => {
     setShowResetConfirm(false)
