@@ -18,7 +18,7 @@ export function useGameRealtime(
 
     const realtimeChannel = supabase.channel(`game:${gameId}`, {
       config: {
-        broadcast: { self: false },
+        broadcast: { self: true }, // Enable self to receive own broadcasts (filtered in useSupabaseOpponent)
       },
     })
 
@@ -32,6 +32,7 @@ export function useGameRealtime(
           filter: `game_id=eq.${gameId}`,
         },
         (payload) => {
+          console.log('[useGameRealtime] Database INSERT received:', payload.new)
           onMove({
             ...(payload.new as Move),
             source: 'database',
@@ -39,12 +40,14 @@ export function useGameRealtime(
         }
       )
       .on('broadcast', { event: 'move' }, ({ payload }) => {
+        console.log('[useGameRealtime] Broadcast received:', payload)
         const broadcastMove = payload as Partial<Move> & {
           fen_after?: string
           player_id?: string
         }
 
         if (!broadcastMove.fen_after || !broadcastMove.player_id) {
+          console.warn('[useGameRealtime] Broadcast missing required fields:', broadcastMove)
           return
         }
 
@@ -55,10 +58,12 @@ export function useGameRealtime(
       })
 
     realtimeChannel.subscribe((status) => {
+      console.log('[useGameRealtime] Channel subscription status:', status)
       if (!isMounted) {
         return
       }
       if (status === 'SUBSCRIBED') {
+        console.log('[useGameRealtime] Successfully subscribed to channel:', `game:${gameId}`)
         setChannel(realtimeChannel)
       }
     })
