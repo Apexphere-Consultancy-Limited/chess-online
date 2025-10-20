@@ -56,7 +56,17 @@ export default function OnlineGamePage() {
     try {
       const result = await playerReady(gameId)
       console.log('Ready result:', result)
-      // The game state will update via realtime subscription
+
+      // Immediately update local game state with the response
+      // Don't wait for realtime subscription for better UX
+      if (result.game && game) {
+        setGame({
+          ...game,
+          white_ready: result.game.whiteReady,
+          black_ready: result.game.blackReady,
+          status: result.game.status,
+        })
+      }
     } catch (err) {
       console.error('Failed to mark ready:', err)
       const errorMessage = err instanceof Error ? err.message : 'Unknown error'

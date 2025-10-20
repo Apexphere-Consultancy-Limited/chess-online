@@ -19,6 +19,17 @@ export interface OpponentMove {
   to: string          // e.g., "e4"
   promotion?: string  // e.g., "q" for queen promotion
   fen?: string        // Optional: FEN string after the move (for bot to calculate response)
+
+  // For online games: Database move metadata (when source is 'database')
+  source?: 'database' | 'broadcast'
+  player_id?: string      // Who made this move
+  from_square?: string
+  to_square?: string
+  piece?: string
+  captured_piece?: string
+  san_notation?: string
+  move_number?: number
+  fen_after?: string
 }
 
 /**

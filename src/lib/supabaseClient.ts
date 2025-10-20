@@ -37,6 +37,9 @@ export type Game = {
   result?: 'white_win' | 'black_win' | 'draw' | 'abandoned'
   winner_id?: string
   termination_type?: 'checkmate' | 'resignation' | 'timeout' | 'draw_agreement' | 'stalemate' | 'insufficient_material'
+  white_ready?: boolean
+  black_ready?: boolean
+  ready_expires_at?: string
   created_at: string
   started_at?: string
   completed_at?: string
